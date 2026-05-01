@@ -1,7 +1,7 @@
 # Zeal Cards Pricing Algorithm — v1 Specification
 
 **Status:** Draft for review
-**Owner:** [your name]
+**Owner:** Regan Plank
 **Last updated:** 2026-05-01
 **Source of truth:** `GiftCardPricingData_2025.xlsx` (PricingSheet, InputsandMargins) — March 2022 baseline
 
