@@ -1,0 +1,28 @@
+# Database — contents gitignored, folder tracked via .gitkeep
+data/*
+!data/.gitkeep
+
+# Environment secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+
+# uv
+.uv/
+
+# Ruff cache
+.ruff_cache/
+
+# pytest
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
