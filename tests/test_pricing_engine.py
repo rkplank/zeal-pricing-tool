@@ -9,10 +9,10 @@
 #     "No" = channel ineligible; None = no eBay data propagated.
 
 import pytest
-from zeal.pricing.engine import compute_prices
 
 from zeal.models.merchant import MerchantConfig
 from zeal.models.pricing import GlobalConstants
+from zeal.pricing.engine import compute_prices
 
 _ABS = 0.001
 

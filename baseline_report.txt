@@ -1,0 +1,824 @@
+=== Zeal Spreadsheet Baseline Extraction Report ===
+Workbook : C:\Users\kandt\OneDrive - Umich\Zeal Cards\Pricing\GiftCardPricingData_2025.xlsx
+Generated: 2026-05-02T21:28:33Z
+
+Note: confidence='high' is passed to compute_prices for all rows.
+Confidence affects PriceRecommendation.confidence only, not the four
+numeric outputs — it does not affect any diff in this report.
+
+--- Classification summary ---
+  normal              : 265
+  no_ebay_data_local  : 25
+  bankrupt_broken     : 4
+  section_divider     : 2
+  skip_blank          : 2
+  total               : 298
+
+--- Global constants extracted ---
+  ebay_sale_costs                : 0.13
+  paypal_sell_costs              : 0.03
+  ebay_postage_costs             : 0.01
+  online_store_postage_costs     : 0.03
+  online_sell_bonus_competitive  : 0.065
+  online_sell_bonus_zen_nocomp   : 0.085
+  in_store_bad_debt              : 0.048
+  in_mail_bad_debt               : 0.02
+  online_bad_debt                : 0.05
+
+--- Merchant baseline diffs ---
+ Row | Slug                           | Tier | Status   |  OS     |  IM     |  IS     |  EB     | Notes
+----+--------------------------------+------+----------+---------+---------+---------+---------+--
+   3 | mastercard                     | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+   4 | american_express               | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+   5 | visa                           | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+   6 | amazon                         | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+   7 | ebay                           | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+   8 | google_play                    | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+   9 | itunes                         | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  10 | apple                          | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  11 | home_depot                     | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  12 | home_depot_merch_credit_no_id  | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  13 | home_depot_merch_credit_with_id | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  14 | home_depot_estore_credit       | Z    | match    |  0.0000 |    "No" |    "No" |  0.0000 | electronic_buy_override=0.65
+  15 | menards                        | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  16 | menards_rebate                 | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  17 | lowe_s                         | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  18 | lowes_merch_credit_no_id       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  19 | bread_and_butter               | NC   | MISMATCH | !0.0187 | !0.1038 | !0.2711 | MISMATCH(ss=0.6917,eng='No') | tier missing from column G; defaulted to NC; e_bonus_unresolved: electronic_eligible forced False
+  20 | best_buy                       | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  21 | bp                             | C    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  22 | chick_fil_a                    | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  23 | cvs                            | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  24 | delta                          | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  25 | dick_s_sporting_goods          | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  26 | disney                         | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  27 | dunkin_donuts                  | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  28 | harley_davidson                | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  29 | ikea                           | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  30 | ikea_merch_credit              | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  31 | jimmy_john_s                   | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  32 | kohl_s                         | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  33 | kroger                         | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  34 | lululemon                      | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  35 | macy_s                         | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  36 | massage_envy                   | C    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  37 | mcdonalds                      | C    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  38 | meijer                         | T24  | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  39 | neiman_marcus                  | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  40 | nordstrom                      | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  41 | office_depot_officemax         | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  42 | panera                         | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  43 | shell                          | T24  | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  44 | southwest                      | NC   | MISMATCH |  0.0000 |  0.0000 | !0.0280 |  0.0000 | 
+  45 | speedway_food_and_merch        | NC   | MISMATCH |  0.0000 |  0.0000 | !0.0280 |  0.0000 | 
+  46 | speedway_fuel                  | T24  | MISMATCH |  0.0000 |  0.0000 | !0.0280 |  0.0000 | 
+  47 | staples                        | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  48 | starbucks                      | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  49 | subway                         | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  50 | target                         | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  51 | target_merch_credit            | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  52 | tj_maxx_homegoods_marshalls    | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  53 | tjm_homegoods_marshalls_merch_credit | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  54 | trader_joe_s                   | T24  | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  55 | verizon                        | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  56 | victoria_s_secret              | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  57 | walgreens                      | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  58 | walmart                        | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  59 | whole_foods                    | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  60 | top_cards                      | NC   | MISMATCH | !0.0184 | !0.0935 | !0.2765 | MISMATCH(ss=0.5545,eng='No') | tier missing from column G; defaulted to NC; e_bonus_unresolved: electronic_eligible forced False
+  61 | amc_theaters                   | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  62 | ann_taylor_loft                | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  63 | best_western                   | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  64 | black_angus                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  65 | bravo_cucina_italiana          | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  66 | brooks_brothers                | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  67 | build_a_bear                   | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  68 | carter_s                       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  69 | cinemark                       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  70 | family_dollar                  | NC   | MISMATCH |  0.0000 |  0.0000 | !0.0280 |    "No" | 
+  71 | fandango                       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  72 | gnc                            | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  73 | goodrich_quality_theaters      | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  74 | kona_grill                     | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  75 | lands_end_kmart_sears          | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  76 | lane_bryant                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  77 | logan_s_roadhouse              | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  78 | marriott                       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  79 | movietickets_com               | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  80 | regal_entertainment_group      | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  81 | ruby_tuesday                   | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+  82 | ticketmaster                   | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  83 | covid_watch_list               | NC   | MISMATCH | !0.0173 | !0.1455 | !0.2733 | MISMATCH(ss=0.3695,eng='No') | tier missing from column G; defaulted to NC; e_bonus_unresolved: electronic_eligible forced False
+  84 | abercrombie                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  85 | academy_sports_outdoors        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  86 | ace_hardware                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  87 | adidas                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  88 | advance_auto_parts             | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  89 | aeropostale                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  90 | american_eagle_outfitters      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  91 | anthropologie                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  92 | applebee_s                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  93 | athleta_br_gap_on              | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  94 | autozone                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  95 | barnes_noble                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  96 | bass_pro_shops_cabelas         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  97 | bath_body_works                | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  98 | bd_s_mongolian_grill           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+  99 | belk                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 100 | benihana                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 101 | bloomingdale_s                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 102 | boscovs                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 103 | buckle                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 104 | burlington_coat_factory        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 105 | bw3                            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 106 | california_pizza_kitchen       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 107 | carrabba_s_italian_grill_flemings_outback | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 108 | cato                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 109 | cheesecake_factory             | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 110 | chico_s                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 111 | children_s_place               | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 112 | chili_s_maggiano_s_macaroni_grill_on_the_border | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 113 | claire_s                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 114 | coach                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 115 | cold_stone_creamery            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 116 | costco                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 117 | cracker_barrel                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 118 | crate_barrel                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 119 | darden_olive_garden_longhorn_steakhouse | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 120 | destination_xl                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 121 | dollar_tree                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 122 | domino_s                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 123 | dsw_shoe_warehouse             | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 124 | eddie_bauer                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 125 | emagine_theaters               | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 126 | express                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 127 | famous_footwear                | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 128 | five_below                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 129 | five_guys                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 130 | foot_locker_champs_sports      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 131 | fye                            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 132 | gamestop                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 133 | godiva                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 134 | guitar_center                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 135 | h_m                            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 136 | hallmark                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 137 | harbor_freight                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 138 | hobby_lobby                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 139 | hollister                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 140 | honeybaked                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 141 | hot_topic                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 142 | ihop                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 143 | j_alexander_s                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 144 | j_crew                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 145 | jcpenney                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 146 | jos_a_bank                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 147 | journeys                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 148 | kay_jewelers                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 149 | kendra_scott                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 150 | kirkland_s                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 151 | lids                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 152 | ll_bean                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 153 | mac                            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 154 | maurices                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 155 | men_s_wearhouse                | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 156 | michael_kors                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 157 | michaels                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 158 | new_york_company               | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 159 | nike                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 160 | noodles_company                | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 161 | north_face                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 162 | olga_s                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 163 | o_reilly_auto                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 164 | origins                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 165 | orvis                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 166 | pacsun                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 167 | pebble_beach                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 168 | petco                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 169 | petsmart                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 170 | pf_chang_s                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 171 | pizza_hut                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 172 | potbelly                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 173 | pottery_barn_williams_sonoma   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 174 | qdoba                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 175 | rainbow_shops                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 176 | red_lobster                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 177 | red_robin                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 178 | rei                            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 179 | rocky_mountain_chocolate_factory | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 180 | ruth_s_chris_steakhouse        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 181 | saks_fifth_avenue              | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 182 | sally_beauty_supply            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 183 | sephora                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 184 | soma                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 185 | spencer_s_gifts                | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 186 | steak_n_shake                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 187 | sunglass_hut                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 188 | taco_bell                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 189 | talbots                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 190 | texas_roadhouse                | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 191 | tgi_friday_s                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 192 | tiffany                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 193 | tommy_hilfiger                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 194 | tractor_supply_company         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 195 | uber                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 196 | ulta                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 197 | under_armour                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 198 | urban_outfitters               | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 199 | vera_bradley                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 200 | vitamin_shoppe                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 201 | von_maur                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 202 | walking_company                | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 203 | wendy_s                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 204 | west_marine                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 205 | white_house_black_market       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 206 | wingstop                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 207 | yankee_candle                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 208 | zagg                           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 209 | zales                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 210 | take_online                    | NC   | MISMATCH | !0.0169 | !0.1269 | !0.2731 | MISMATCH(ss=0.4580,eng='No') | tier missing from column G; defaulted to NC; e_bonus_unresolved: electronic_eligible forced False
+ 211 | arby_s                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 212 | at_home                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 213 | big_boy                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 214 | bob_evans                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 215 | burger_king                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 216 | chipotle                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 217 | circle_k                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 218 | citgo                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 219 | citi_trends                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 220 | culver_s                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 221 | dairy_queen                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 222 | dave_and_buster_s              | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 223 | denny_s                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 224 | dollar_general                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 225 | dunham_s                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 226 | einstein_bros_bagels           | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 227 | food_lion                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 228 | j_jill                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 229 | jiffy_lube                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 230 | kfc                            | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 231 | lacoste                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 232 | landry_s                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 233 | little_caesars                 | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 234 | marathon                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 235 | menchie_s                      | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 236 | micro_center                   | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 237 | mobil                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 238 | ollie_s_bargain_outlet         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 239 | pet_supplies_plus              | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 240 | publix                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 241 | safeway_albertsons             | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 242 | save_a_lot                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 243 | spafinder_com                  | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 244 | sunoco                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 245 | tim_hortons                    | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 246 | tropical_smoothie_caf          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 247 | windsor                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 248 | zappos                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 250 | andiamo                        | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 251 | antonio_s_cucina_italiana      | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 252 | aubree_s                       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 253 | biggby_coffee                  | NC   | MISMATCH | !0.1070 | !0.1070 | !0.1070 |    "No" | 
+ 254 | busch_s                        | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 255 | carlyle_grill                  | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 256 | detroit_tigers                 | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 257 | detroit_zoo                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 258 | ichiban                        | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 259 | k_g_fashion_super_store        | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 260 | knight_s                       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 261 | lavida_massage                 | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 262 | lewis_jewelers                 | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 263 | mainstreet_ventures            | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 264 | mancino_s_pizza_grinders       | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 265 | mani_osteria_bar               | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 266 | mediterrano                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 267 | miles_of_golf                  | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 268 | mt_brighton                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 269 | palm_palace                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 270 | plum_market                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 271 | sidetrack                      | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 272 | value_world                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 273 | weber_s_inn                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 274 | zingerman_s                    | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 275 | generic                        | NC   | excluded |       - |       - |       - |       - | bankrupt_broken: #VALUE! in output cells
+ 276 | local                          | NC   | MISMATCH | !0.1070 | !0.0418 | !0.1908 | MISMATCH(ss=0.3700,eng='No') | tier missing from column G; defaulted to NC; e_bonus_unresolved: electronic_eligible forced False
+ 279 | bed_bath_beyond                | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 280 | avenue                         | Z    | excluded |       - |       - |       - |       - | bankrupt_broken: #VALUE! in output cells
+ 281 | bebe                           | Z    | excluded |       - |       - |       - |       - | bankrupt_broken: #VALUE! in output cells
+ 282 | big_lots                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 283 | carson_s                       | C    | excluded |       - |       - |       - |       - | bankrupt_broken: #VALUE! in output cells
+ 284 | charlotte_russe                | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 285 | christopher_banks              | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 286 | dressbarn                      | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 287 | forever_21                     | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 288 | gymboree                       | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 289 | hooters                        | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 290 | joann                          | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 291 | justice                        | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 292 | lord_and_taylor                | C    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 293 | max_erma_s                     | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 294 | m_den                          | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 295 | old_country_buffet             | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 296 | payless                        | NC   | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 298 | rue_21                         | Z    | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+ 299 | rite_aid                       | Z    | match    |  0.0000 |  0.0000 |  0.0000 |    "No" | 
+ 300 | toys_r_us                      | T24  | match    |  0.0000 |  0.0000 |  0.0000 |  0.0000 | 
+
+--- Mismatches ---
+
+Row 19 — bread_and_butter
+  Tier          : NC
+  eBay input    : 0.9482499999999999
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.0
+    in_mail_margin   = 0.0
+    ebay_differential= 0.02500000000000001
+    e_bonus          = None
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = False
+  Formula refs:
+    online_sell  : []
+    in_mail_buy  : []
+    in_store_buy : []
+    electronic   : []
+  Spreadsheet outputs:
+    online_sell  = 0.9045
+    in_mail_buy  = 0.7394666666666665
+    in_store_buy = 0.5441333333333334
+    electronic   = 0.69175
+  Engine outputs:
+    online_sell  = 0.9232499999999999
+    in_mail_buy  = 0.8432499999999998
+    in_store_buy = 0.8152499999999998
+    electronic   = No
+
+Row 44 — southwest
+  Tier          : NC
+  eBay input    : 0.863
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.3
+    in_mail_margin   = 0.15
+    ebay_differential= 0.04500000000000001
+    e_bonus          = 0.17
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = True
+  Formula refs:
+    online_sell  : ['B23']
+    in_mail_buy  : ['B18', 'B3', 'B9', 'B5']
+    in_store_buy : ['B17', 'B3', 'B5', 'B9']
+    electronic   : ['B21']
+  Spreadsheet outputs:
+    online_sell  = 0.818
+    in_mail_buy  = 0.5879999999999999
+    in_store_buy = 0.43799999999999994
+    electronic   = 0.4179999999999998
+  Engine outputs:
+    online_sell  = 0.818
+    in_mail_buy  = 0.5879999999999999
+    in_store_buy = 0.41
+    electronic   = 0.4179999999999998
+
+Row 45 — speedway_food_and_merch
+  Tier          : NC
+  eBay input    : 0.895
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.3
+    in_mail_margin   = 0.15
+    ebay_differential= 0.04500000000000001
+    e_bonus          = 0.17
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = True
+  Formula refs:
+    online_sell  : ['B23']
+    in_mail_buy  : ['B18', 'B3', 'B9', 'B5']
+    in_store_buy : ['B17', 'B3', 'B5', 'B9']
+    electronic   : ['B21']
+  Spreadsheet outputs:
+    online_sell  = 0.85
+    in_mail_buy  = 0.6199999999999999
+    in_store_buy = 0.47
+    electronic   = 0.44999999999999984
+  Engine outputs:
+    online_sell  = 0.85
+    in_mail_buy  = 0.6199999999999999
+    in_store_buy = 0.442
+    electronic   = 0.44999999999999984
+
+Row 46 — speedway_fuel
+  Tier          : T24
+  eBay input    : 0.91
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.3
+    in_mail_margin   = 0.03
+    ebay_differential= 0.04500000000000001
+    e_bonus          = 0.17
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = True
+  Formula refs:
+    online_sell  : ['B23']
+    in_mail_buy  : ['B12', 'B3', 'B9', 'B5']
+    in_store_buy : ['B17', 'B3', 'B5', 'B9']
+    electronic   : ['B21']
+  Spreadsheet outputs:
+    online_sell  = 0.865
+    in_mail_buy  = 0.7549999999999999
+    in_store_buy = 0.4849999999999999
+    electronic   = 0.5849999999999999
+  Engine outputs:
+    online_sell  = 0.865
+    in_mail_buy  = 0.7549999999999999
+    in_store_buy = 0.4569999999999999
+    electronic   = 0.5849999999999999
+
+Row 60 — top_cards
+  Tier          : NC
+  eBay input    : 0.886825
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.0
+    in_mail_margin   = 0.0
+    ebay_differential= 0.02500000000000001
+    e_bonus          = None
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = False
+  Formula refs:
+    online_sell  : []
+    in_mail_buy  : []
+    in_store_buy : []
+    electronic   : []
+  Spreadsheet outputs:
+    online_sell  = 0.8434358974358974
+    in_mail_buy  = 0.6883076923076923
+    in_store_buy = 0.47733333333333333
+    electronic   = 0.5545333333333332
+  Engine outputs:
+    online_sell  = 0.861825
+    in_mail_buy  = 0.7818249999999999
+    in_store_buy = 0.7538249999999999
+    electronic   = No
+
+Row 70 — family_dollar
+  Tier          : NC
+  eBay input    : 0.848
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.29
+    in_mail_margin   = 0.11
+    ebay_differential= 0.04500000000000001
+    e_bonus          = None
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = False
+  Formula refs:
+    online_sell  : ['B23']
+    in_mail_buy  : ['B16', 'B3', 'B9', 'B5']
+    in_store_buy : ['B15', 'B3', 'B5', 'B9']
+    electronic   : []
+  Spreadsheet outputs:
+    online_sell  = 0.8029999999999999
+    in_mail_buy  = 0.6129999999999999
+    in_store_buy = 0.43299999999999983
+    electronic   = No
+  Engine outputs:
+    online_sell  = 0.8029999999999999
+    in_mail_buy  = 0.6129999999999999
+    in_store_buy = 0.40499999999999986
+    electronic   = No
+
+Row 83 — covid_watch_list
+  Tier          : NC
+  eBay input    : 0.8011818181818182
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.0
+    in_mail_margin   = 0.0
+    ebay_differential= 0.02500000000000001
+    e_bonus          = None
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = False
+  Formula refs:
+    online_sell  : []
+    in_mail_buy  : []
+    in_store_buy : []
+    electronic   : []
+  Spreadsheet outputs:
+    online_sell  = 0.758909090909091
+    in_mail_buy  = 0.5507272727272726
+    in_store_buy = 0.3949090909090909
+    electronic   = 0.3694736842105262
+  Engine outputs:
+    online_sell  = 0.7761818181818182
+    in_mail_buy  = 0.6961818181818181
+    in_store_buy = 0.6681818181818181
+    electronic   = No
+
+Row 210 — take_online
+  Tier          : NC
+  eBay input    : 0.8081811023622046
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.0
+    in_mail_margin   = 0.0
+    ebay_differential= 0.02500000000000001
+    e_bonus          = None
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = False
+  Formula refs:
+    online_sell  : []
+    in_mail_buy  : []
+    in_store_buy : []
+    electronic   : []
+  Spreadsheet outputs:
+    online_sell  = 0.7663307086614172
+    in_mail_buy  = 0.576330708661417
+    in_store_buy = 0.4020314960629921
+    electronic   = 0.4579842519685039
+  Engine outputs:
+    online_sell  = 0.7831811023622046
+    in_mail_buy  = 0.7031811023622045
+    in_store_buy = 0.6751811023622045
+    electronic   = No
+
+Row 253 — biggby_coffee
+  Tier          : NC
+  eBay input    : 0.668
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.3
+    in_mail_margin   = 0.15
+    ebay_differential= 0.02500000000000001
+    e_bonus          = None
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = False
+  Formula refs:
+    online_sell  : []
+    in_mail_buy  : ['B18', 'B3', 'B5', 'B9']
+    in_store_buy : ['B17', 'B3', 'B5', 'B8']
+    electronic   : []
+  Spreadsheet outputs:
+    online_sell  = 0.75
+    in_mail_buy  = 0.5199999999999999
+    in_store_buy = 0.342
+    electronic   = No
+  Engine outputs:
+    online_sell  = 0.643
+    in_mail_buy  = 0.4129999999999999
+    in_store_buy = 0.23500000000000004
+    electronic   = No
+
+Row 276 — local
+  Tier          : NC
+  eBay input    : 0.668
+  online_sell_override    : None
+  electronic_buy_override : None
+  Config:
+    in_store_margin  = 0.0
+    in_mail_margin   = 0.0
+    ebay_differential= 0.02500000000000001
+    e_bonus          = None
+    in_store_eligible= True
+    in_mail_eligible = True
+    electronic_eligible = False
+  Formula refs:
+    online_sell  : []
+    in_mail_buy  : []
+    in_store_buy : []
+    electronic   : []
+  Spreadsheet outputs:
+    online_sell  = 0.75
+    in_mail_buy  = 0.5211538461538461
+    in_store_buy = 0.3442307692307693
+    electronic   = 0.36999999999999994
+  Engine outputs:
+    online_sell  = 0.643
+    in_mail_buy  = 0.563
+    in_store_buy = 0.5349999999999999
+    electronic   = No
+
+--- Tier-vs-margin-row audit ---
+  row  11 home_depot                     tier=C: in_store expects C-in-store but uses T24-in-store
+  row  12 home_depot_merch_credit_no_id  tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  13 home_depot_merch_credit_with_id tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  15 menards                        tier=C: in_store expects C-in-store but uses Z-in-store
+  row  16 menards_rebate                 tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  17 lowe_s                         tier=C: in_store expects C-in-store but uses T24-in-store
+  row  18 lowes_merch_credit_no_id       tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  20 best_buy                       tier=C: in_store expects C-in-store but uses T24-in-store
+  row  26 disney                         tier=C: in_store expects C-in-store but uses Z-in-store
+  row  28 harley_davidson                tier=C: in_store expects C-in-store but uses Z-in-store
+  row  29 ikea                           tier=C: in_store expects C-in-store but uses Z-in-store
+  row  30 ikea_merch_credit              tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  31 jimmy_john_s                   tier=T24: in_store expects T24-in-store but uses C-in-store
+  row  32 kohl_s                         tier=C: in_store expects C-in-store but uses T24-in-store
+  row  33 kroger                         tier=T24: in_store expects T24-in-store but uses C-in-store
+  row  36 massage_envy                   tier=C: in_store expects C-in-store but uses NC-in-store
+  row  37 mcdonalds                      tier=C: in_store expects C-in-store but uses Z-in-store
+  row  38 meijer                         tier=T24: in_store expects T24-in-store but uses C-in-store
+  row  40 nordstrom                      tier=C: in_store expects C-in-store but uses T24-in-store
+  row  41 office_depot_officemax         tier=C: in_store expects C-in-store but uses T24-in-store
+  row  43 shell                          tier=T24: in_store expects T24-in-store but uses C-in-store
+  row  46 speedway_fuel                  tier=T24: in_store expects T24-in-store but uses NC-in-store
+  row  49 subway                         tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  50 target                         tier=C: in_store expects C-in-store but uses T24-in-store
+  row  51 target_merch_credit            tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  52 tj_maxx_homegoods_marshalls    tier=C: in_store expects C-in-store but uses T24-in-store
+  row  53 tjm_homegoods_marshalls_merch_credit tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  54 trader_joe_s                   tier=T24: in_store expects T24-in-store but uses C-in-store
+  row  55 verizon                        tier=NC: in_store expects NC-in-store but uses Z-in-store
+  row  56 victoria_s_secret              tier=C: in_store expects C-in-store but uses T24-in-store
+  row  58 walmart                        tier=C: in_store expects C-in-store but uses T24-in-store
+  row  61 amc_theaters                   tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  62 ann_taylor_loft                tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  63 best_western                   tier=NC: in_store expects NC-in-store but uses C-in-store; in_mail expects NC-in-mail but uses C-in-mail
+  row  64 black_angus                    tier=NC: in_store expects NC-in-store but uses Z-in-store; in_mail expects NC-in-mail but uses Z-in-mail
+  row  65 bravo_cucina_italiana          tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  66 brooks_brothers                tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  67 build_a_bear                   tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  68 carter_s                       tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  69 cinemark                       tier=NC: in_store expects NC-in-store but uses C-in-store; in_mail expects NC-in-mail but uses C-in-mail
+  row  70 family_dollar                  tier=NC: in_store expects NC-in-store but uses Z-in-store; in_mail expects NC-in-mail but uses Z-in-mail
+  row  71 fandango                       tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  72 gnc                            tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  73 goodrich_quality_theaters      tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  74 kona_grill                     tier=NC: in_store expects NC-in-store but uses Z-in-store; in_mail expects NC-in-mail but uses Z-in-mail
+  row  75 lands_end_kmart_sears          tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  76 lane_bryant                    tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  77 logan_s_roadhouse              tier=NC: in_store expects NC-in-store but uses Z-in-store; in_mail expects NC-in-mail but uses Z-in-mail
+  row  78 marriott                       tier=NC: in_store expects NC-in-store but uses C-in-store; in_mail expects NC-in-mail but uses C-in-mail
+  row  79 movietickets_com               tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  80 regal_entertainment_group      tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  81 ruby_tuesday                   tier=NC: in_store expects NC-in-store but uses C-in-store; in_mail expects NC-in-mail but uses C-in-mail
+  row  82 ticketmaster                   tier=NC: in_store expects NC-in-store but uses C-in-store
+  row  84 abercrombie                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  86 ace_hardware                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  87 adidas                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  88 advance_auto_parts             tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  89 aeropostale                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  90 american_eagle_outfitters      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  91 anthropologie                  tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  92 applebee_s                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  93 athleta_br_gap_on              tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  94 autozone                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  95 barnes_noble                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  96 bass_pro_shops_cabelas         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  97 bath_body_works                tier=Z: in_store expects Z-in-store but uses C-in-store
+  row  98 bd_s_mongolian_grill           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 100 benihana                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 103 buckle                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 104 burlington_coat_factory        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 105 bw3                            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 106 california_pizza_kitchen       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 107 carrabba_s_italian_grill_flemings_outback tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 108 cato                           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 109 cheesecake_factory             tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 110 chico_s                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 111 children_s_place               tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 112 chili_s_maggiano_s_macaroni_grill_on_the_border tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 114 coach                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 115 cold_stone_creamery            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 116 costco                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 117 cracker_barrel                 tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 118 crate_barrel                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 119 darden_olive_garden_longhorn_steakhouse tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 122 domino_s                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 123 dsw_shoe_warehouse             tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 124 eddie_bauer                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 126 express                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 127 famous_footwear                tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 128 five_below                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 129 five_guys                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 130 foot_locker_champs_sports      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 131 fye                            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 132 gamestop                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 133 godiva                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 134 guitar_center                  tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 135 h_m                            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 136 hallmark                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 137 harbor_freight                 tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 138 hobby_lobby                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 139 hollister                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 140 honeybaked                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 141 hot_topic                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 142 ihop                           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 143 j_alexander_s                  tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 144 j_crew                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 145 jcpenney                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 146 jos_a_bank                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 147 journeys                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 148 kay_jewelers                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 150 kirkland_s                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 151 lids                           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 152 ll_bean                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 153 mac                            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 155 men_s_wearhouse                tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 156 michael_kors                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 157 michaels                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 158 new_york_company               tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 159 nike                           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 160 noodles_company                tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 161 north_face                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 162 olga_s                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 164 origins                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 165 orvis                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 166 pacsun                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 168 petco                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 169 petsmart                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 170 pf_chang_s                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 171 pizza_hut                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 172 potbelly                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 173 pottery_barn_williams_sonoma   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 174 qdoba                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 175 rainbow_shops                  tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 176 red_lobster                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 177 red_robin                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 178 rei                            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 180 ruth_s_chris_steakhouse        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 181 saks_fifth_avenue              tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 182 sally_beauty_supply            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 183 sephora                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 186 steak_n_shake                  tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 187 sunglass_hut                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 188 taco_bell                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 189 talbots                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 190 texas_roadhouse                tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 191 tgi_friday_s                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 192 tiffany                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 193 tommy_hilfiger                 tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 194 tractor_supply_company         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 195 uber                           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 196 ulta                           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 197 under_armour                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 198 urban_outfitters               tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 200 vitamin_shoppe                 tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 203 wendy_s                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 205 white_house_black_market       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 206 wingstop                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 207 yankee_candle                  tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 208 zagg                           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 209 zales                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 211 arby_s                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 212 at_home                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 213 big_boy                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 214 bob_evans                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 215 burger_king                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 216 chipotle                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 217 circle_k                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 218 citgo                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 219 citi_trends                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 220 culver_s                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 221 dairy_queen                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 222 dave_and_buster_s              tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 223 denny_s                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 224 dollar_general                 tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 225 dunham_s                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 226 einstein_bros_bagels           tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 227 food_lion                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 228 j_jill                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 229 jiffy_lube                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 230 kfc                            tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 231 lacoste                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 232 landry_s                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 233 little_caesars                 tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 234 marathon                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 235 menchie_s                      tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 236 micro_center                   tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 237 mobil                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 238 ollie_s_bargain_outlet         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 239 pet_supplies_plus              tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 240 publix                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 241 safeway_albertsons             tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 242 save_a_lot                     tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 243 spafinder_com                  tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 244 sunoco                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 245 tim_hortons                    tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 246 tropical_smoothie_caf          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 247 windsor                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 279 bed_bath_beyond                tier=C: in_store expects C-in-store but uses T24-in-store
+  row 282 big_lots                       tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 285 christopher_banks              tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 287 forever_21                     tier=NC: in_store expects NC-in-store but uses C-in-store
+  row 289 hooters                        tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 290 joann                          tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 295 old_country_buffet             tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 298 rue_21                         tier=Z: in_store expects Z-in-store but uses C-in-store
+  row 299 rite_aid                       tier=Z: in_store expects Z-in-store but uses C-in-store
