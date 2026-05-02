@@ -207,21 +207,25 @@ SQLite, single file at `data/zeal.db`. All timestamps are ISO 8601 UTC strings (
 
 ```sql
 CREATE TABLE merchants (
-    merchant_id           TEXT PRIMARY KEY,
-    display_name          TEXT NOT NULL,
-    tier                  TEXT NOT NULL CHECK (tier IN ('T24','C','Z','NC')),
-    in_store_margin       REAL NOT NULL,
-    in_mail_margin        REAL NOT NULL,
-    e_bonus               REAL,                          -- NULL if electronic not offered
-    ebay_differential     REAL NOT NULL,
-    electronic_eligible   INTEGER NOT NULL CHECK (electronic_eligible IN (0,1)),
-    merch_credit_variant  INTEGER NOT NULL CHECK (merch_credit_variant IN (0,1)),
-    inclusion_regex       TEXT NOT NULL,                 -- for matching eBay listing titles
-    exclusion_regex       TEXT,                          -- e.g. exclude 'Michaels' when matching 'Michael Kors'
-    notes                 TEXT,
-    is_active             INTEGER NOT NULL DEFAULT 1,
-    created_at            TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
+    merchant_id              TEXT PRIMARY KEY,
+    display_name             TEXT NOT NULL,
+    tier                     TEXT NOT NULL CHECK (tier IN ('T24','C','Z','NC')),
+    in_store_margin          REAL NOT NULL,
+    in_mail_margin           REAL NOT NULL,
+    e_bonus                  REAL,                          -- NULL if no electronic computation needed
+    ebay_differential        REAL NOT NULL,
+    in_store_eligible        INTEGER NOT NULL CHECK (in_store_eligible IN (0,1)),
+    in_mail_eligible         INTEGER NOT NULL CHECK (in_mail_eligible IN (0,1)),
+    electronic_eligible      INTEGER NOT NULL CHECK (electronic_eligible IN (0,1)),
+    online_sell_override     REAL,                          -- NULL for normal merchants; set for "Pattern A" (~25 NC merchants)
+    electronic_buy_override  REAL,                          -- NULL for normal merchants; set for Home Depot eStore Credit only
+    merch_credit_variant     INTEGER NOT NULL CHECK (merch_credit_variant IN (0,1)),
+    inclusion_regex          TEXT NOT NULL,                 -- for matching eBay listing titles
+    exclusion_regex          TEXT,                          -- e.g. exclude 'Michaels' when matching 'Michael Kors'
+    notes                    TEXT,
+    is_active                INTEGER NOT NULL DEFAULT 1,
+    created_at               TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at               TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 
@@ -362,6 +366,8 @@ CREATE TABLE refresh_runs (
 ### 6.2 Schema design notes
 
 - **All percentages stored as floats in [0, 1].** No "78%" strings, no integer percentages-times-100. The algorithm operates in fractions; UI converts on display.
+- **Eligibility is per-channel.** The `in_store_eligible`, `in_mail_eligible`, `electronic_eligible` flags map directly to the spreadsheet's `"No"` convention in columns C, E, D respectively. Any combination is permitted (e.g. Home Depot eStore Credit is electronic-only; merch-credit variants are electronic-disabled).
+- **Override fields are surgical.** `online_sell_override` and `electronic_buy_override` exist for specific spreadsheet patterns where the standard formula doesn't apply: Pattern A (local NC merchants, ~25 today) and Home Depot eStore Credit (1 merchant). When `NULL`, the standard formula path runs. The engine checks overrides before deriving from eBay input or in-mail buy.
 - **No FK cascades on delete.** Merchants are never deleted, only deactivated (`is_active = 0`). This preserves history.
 - **Snapshot config in `price_recommendations`.** When an old recommendation is reviewed months later, we want to know what the config *was at the time*, not what it is now. The JSON snapshot is the cheapest way to get this.
 - **No dedicated `users` table.** Single user, no auth needed.
@@ -425,7 +431,11 @@ class MerchantConfig:
     in_mail_margin: float
     e_bonus: float | None
     ebay_differential: float
+    in_store_eligible: bool
+    in_mail_eligible: bool
     electronic_eligible: bool
+    online_sell_override: float | None = None
+    electronic_buy_override: float | None = None
 
 @dataclass(frozen=True)
 class GlobalConstants:
@@ -450,42 +460,65 @@ def compute_prices(
     config: MerchantConfig,
     constants: GlobalConstants,
 ) -> PriceRecommendation:
-    if ebay_sell_pct is None:
-        return PriceRecommendation(None, None, None, None, no_data=True, confidence="none")
+    # Online sell: override wins, else eBay-derived, else No Data sentinel
+    if config.online_sell_override is not None:
+        online_sell: float | str = config.online_sell_override
+    elif ebay_sell_pct is None:
+        online_sell = "No Data"
+    else:
+        online_sell = ebay_sell_pct - config.ebay_differential
 
-    online_sell = ebay_sell_pct - config.ebay_differential
-    in_mail_buy = (
-        online_sell
-        - config.in_mail_margin
-        - constants.paypal_sell_costs
-        - constants.in_mail_bad_debt
-        - constants.online_store_postage_costs
-    )
-    in_store_buy = (
-        online_sell
-        - config.in_store_margin
-        - constants.paypal_sell_costs
-        - constants.online_store_postage_costs
-        - constants.in_store_bad_debt
-    )
+    # In-mail: eligibility wins, then No Data propagation, then formula
+    if not config.in_mail_eligible:
+        in_mail_buy: float | str = "No"
+    elif isinstance(online_sell, str):  # "No Data"
+        in_mail_buy = "No Data"
+    else:
+        in_mail_buy = (
+            online_sell
+            - config.in_mail_margin
+            - constants.paypal_sell_costs
+            - constants.in_mail_bad_debt
+            - constants.online_store_postage_costs
+        )
 
+    # In-store: parallel structure
+    if not config.in_store_eligible:
+        in_store_buy: float | str = "No"
+    elif isinstance(online_sell, str):
+        in_store_buy = "No Data"
+    else:
+        in_store_buy = (
+            online_sell
+            - config.in_store_margin
+            - constants.paypal_sell_costs
+            - constants.online_store_postage_costs
+            - constants.in_store_bad_debt
+        )
+
+    # Electronic: eligibility, then override (bypasses in-mail dependency), then formula
     if not config.electronic_eligible:
-        electronic_buy = "No"
+        electronic_buy: float | str = "No"
+    elif config.electronic_buy_override is not None:
+        electronic_buy = config.electronic_buy_override
+    elif isinstance(in_mail_buy, str):  # "No" or "No Data"
+        electronic_buy = "No Data"
     else:
         assert config.e_bonus is not None
         electronic_buy = in_mail_buy - config.e_bonus
 
+    no_data = online_sell == "No Data"
     return PriceRecommendation(
-        online_sell=online_sell,
-        in_mail_buy=in_mail_buy,
-        in_store_buy=in_store_buy,
-        electronic_buy=electronic_buy,
-        no_data=False,
+        online_sell=online_sell if not isinstance(online_sell, str) else None,
+        in_mail_buy=in_mail_buy if not isinstance(in_mail_buy, str) else None,
+        in_store_buy=in_store_buy if not isinstance(in_store_buy, str) else None,
+        electronic_buy=electronic_buy if not isinstance(electronic_buy, str) else electronic_buy,
+        no_data=no_data,
         confidence=confidence,
     )
 ```
 
-That's the entire algorithm in <40 lines. Everything else in the repo is plumbing around this.
+Note: this is illustrative pseudocode. The actual implementation may use a richer return type that distinguishes `"No"` from `"No Data"` per channel. Decide during the engine implementation session.
 
 **Test strategy:** the file `tests/fixtures/spreadsheet_baseline.json` contains expected outputs for every merchant in the source spreadsheet, given each merchant's config and an eBay input. The test loops every fixture and asserts the engine's output matches to within ±0.001. If we touch the engine and break something, the test catches it.
 
@@ -626,6 +659,7 @@ Tracked here so the build doesn't get blocked on missing answers, but listed so 
 - **Q4.** When the operator overrides, should the override become the new published price immediately, or stay as a pending change until he confirms? Default: immediate (one click is enough; faster workflow).
 - **Q5.** Display: percentages or dollar amounts? Spreadsheet uses percentages; assume same. Confirm with operator.
 - **Q6.** Currency formatting (78.5% vs 0.785 vs $78.50/$100). Use percentages with one decimal place, matching the spreadsheet's convention.
+- **Q7.** When the operator updates `online_sell_override` for a Pattern A merchant, should the daily refresh skip eBay ingestion entirely for that merchant? Default: yes — no eBay calls for merchants with the override set. Saves rate-limit budget and avoids generating misleading "No Data" warnings.
 
 ---
 
