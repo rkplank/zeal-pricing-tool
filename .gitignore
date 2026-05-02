@@ -1,6 +1,7 @@
 # Database — contents gitignored, folder tracked via .gitkeep
 data/*
 !data/.gitkeep
+*.db
 
 # Environment secrets
 .env
@@ -22,6 +23,11 @@ build/
 
 # pytest
 .pytest_cache/
+htmlcov/
+.coverage
+
+# mypy
+.mypy_cache/
 
 # OS
 .DS_Store
