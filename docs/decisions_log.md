@@ -122,3 +122,41 @@ Format: date, decision, alternatives considered, rationale.
 **Alternatives:** (a) substring match on display name (`merch credit`, `merchandise credit`, `estore credit`, `rebate`); (b) explicit operator flag per merchant; (c) separate column in the spreadsheet (doesn't exist today).
 
 **Rationale:** The spreadsheet has no dedicated column for variant flagging; the display name is the only signal. Eight rows match the four substrings cleanly with no false positives observed in the recon. Substring match is automatic during seeding, no operator data entry. The operator can override the flag through the merchant config UI if the rule produces a wrong answer in the future. See spreadsheet_recon.md §7.4.
+
+---
+
+## 2026-05-02 — Four spreadsheet rows excluded from baseline due to in-store bad-debt typo
+
+**Rows:** 44 Southwest, 45 Speedway - Food and Merch, 46 Speedway - Fuel, 70 Family Dollar.
+
+**Issue:** E (in-store) formulas reference InputsandMargins!$B$9 (in_mail_bad_debt = 0.02) where the canonical pattern is $B$8 (in_store_bad_debt = 0.048). Diff is exactly 0.028 in the in-store column. 4 rows out of 288 use B9; the other 284 use B8.
+
+**Confirmed with operator:** typos, not deliberate. The four merchants do not have a different in-store fraud rate.
+
+**Resolution:** documented baseline exclusions in `spreadsheet_recon.md` §10. Engine remains correct (uses in_store_bad_debt for in-store buys per spec §5.3). When merchant config is seeded into SQLite, these four rows are seeded with their *correct* margin/bad-debt values, not the spreadsheet's typo'd computation. The exclusion is from the baseline *test*, not from the production tool.
+
+**Alternatives considered:** (a) add a per-merchant `in_store_bad_debt_override` field — rejected as unnecessary complexity for confirmed typos. (b) fix the spreadsheet — decided against, since the spreadsheet is the legacy artifact being replaced; fixing it adds confusion without value.
+
+---
+
+## 2026-05-02 — Five AVERAGE summary rows reclassified as section aggregates
+
+**Rows:** 19 BREAD AND BUTTER, 60 TOP CARDS, 83 COVID WATCH LIST, 210 TAKE ONLINE, 276 LOCAL.
+
+**Issue:** these rows have F/C/D/E columns containing AVERAGE() formulas over preceding sections (e.g. F19 = AVERAGE(F3:F18)). They are summary statistics the operator added for visibility, not merchants. The recon doc §4.5 only listed name-keyed dividers ("PHYSICAL ONLY", "Bankrupt", "Merchant"); these formula-keyed aggregates were missed.
+
+**Resolution:** new row classification rule in the parser. Detect via "F-column formula starts with `=AVERAGE(`". Treat as section_divider (no merchant_id, no config, excluded from baseline). Recon doc §4.5 updated to cover both name-keyed and formula-keyed dividers.
+
+**Alternatives considered:** create a new `section_aggregate` classification — rejected as gratuitous since downstream behavior is identical to existing dividers.
+
+---
+
+## 2026-05-02 — Row classifier uses F-column as the type signal, not B-column
+
+**Rows affected (one row today, but the rule generalizes):** row 253 Biggby Coffee.
+
+**Issue:** original classifier (recon §4.6) keyed on B-column numeric vs non-numeric. Row 253 has B=0.668 (numeric, looks like eBay data) but F=0.75 (hardcoded literal, not a formula). The C/D/E formulas reference F, so the spreadsheet's actual behavior is Pattern A (hardcoded online_sell), but the classifier called it "normal" and the engine then computed online_sell from B.
+
+**Resolution:** classifier rule changes from "B-numeric → normal" to "F-is-formula → normal; F-is-literal-number → no_ebay_data_local; F-is-empty/error → bankrupt_broken". F-column is the source of truth for row type because it determines what the downstream channels actually consume.
+
+**Alternatives considered:** keep B-keyed rule and add a special-case for row 253 — rejected as fragile (anyone who later updates B for a Pattern A merchant would silently flip it back to "normal").
