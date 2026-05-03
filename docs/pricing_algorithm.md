@@ -348,6 +348,7 @@ These do not block writing the spec but should be tracked:
 - **Q3.** Are the per-merchant margin choices in the spreadsheet deliberate or drift? Answer informs whether the v2 audit (§10.10) is high or low priority. The recon confirmed drift exists (Home Depot row 11 mixes T24 and Competitive margin rows; bankrupt rows 280–283 reference stale tier rows). *Owner: ask the operator, but does not block v1.*
 - **Q4.** ~~What identifier scheme should `merchant_id` use?~~ **Resolved:** lowercase ASCII slug of `merchant[_subtype][_qualifier]` form. See decisions_log.md entry for 2026-05-02.
 - **Q5.** Does the operator want override reasons to be free-text or a dropdown of common reasons? Free-text is more flexible; dropdown is faster to fill out daily.
+- **Q6.** ~~Should the dashboard display prices as percentages (e.g. 87.5%) or dollar amounts (e.g. "$0.875 per $1 face")?~~ **Resolved:** operator confirmed percentages are fine. No dollar-amount conversion layer needed in v1. See decisions_log.md 2026-05-03.
 
 ---
 

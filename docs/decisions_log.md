@@ -160,3 +160,11 @@ Format: date, decision, alternatives considered, rationale.
 **Resolution:** classifier rule changes from "B-numeric → normal" to "F-is-formula → normal; F-is-literal-number → no_ebay_data_local; F-is-empty/error → bankrupt_broken". F-column is the source of truth for row type because it determines what the downstream channels actually consume.
 
 **Alternatives considered:** keep B-keyed rule and add a special-case for row 253 — rejected as fragile (anyone who later updates B for a Pattern A merchant would silently flip it back to "normal").
+
+---
+
+## 2026-05-03 — Dashboard displays percentages, not dollar amounts
+
+**Alternatives:** Display buy/sell prices as dollar amounts for a given face value (e.g. "buy at $0.92 per $1.00" → show "$92.00 for a $100 card").
+
+**Rationale:** Operator confirmed during session 5 that percentages are the right unit for the dashboard. Percentages are already the internal representation (all values stored and computed as fractions of face value per CLAUDE.md), so no conversion layer is needed for v1. Dollar-amount display can be added at the display layer later if the operator changes his mind, without touching the engine. See pricing_algorithm.md Q6.

@@ -312,3 +312,70 @@ These rows are excluded from the golden test (`tests/fixtures/spreadsheet_baseli
 | 70 | Family Dollar | Same B9/B8 typo in E formula. |
 
 **Rationale:** Confirmed typos by operator (decisions_log.md 2026-05-02). The four merchants do not have a different in-store fraud rate. The engine uses `in_store_bad_debt` (B8 = 4.8%) for in-store buys per spec §5.3, which is correct. When these merchants are seeded into SQLite, they receive their correct margin/bad-debt values, not the spreadsheet's typo'd computation. The exclusion is from the baseline *test* only — they are valid production merchants.
+
+---
+
+## 11. Tier-vs-margin drift audit
+
+The extraction report's "Tier-vs-margin-row audit" flags every merchant whose in-store or in-mail formula references a margin row that doesn't match the expected row for their tier label. This section records what those flags mean so the context is preserved for the v2 margin audit (spec §10.10).
+
+**Margin values for reference** (InputsandMargins B11–B18):
+
+| Tier | In-store margin (row) | In-mail margin (row) |
+|------|-----------------------|----------------------|
+| T24  | 25.0% (B11)           | 3.0% (B12)           |
+| C    | 25.0% (B13)           | 7.0% (B14)           |
+| Z    | 29.0% (B15)           | 11.0% (B16)          |
+| NC   | 30.0% (B17)           | 15.0% (B18)          |
+
+**Important:** T24 and C share the same in-store margin (25.0%). Any audit flag for "C uses T24-in-store" or "T24 uses C-in-store" is a cell-reference difference with zero pricing impact.
+
+### 11.1 Value-neutral drift (T24 ↔ C in-store, both 25%)
+
+These merchants reference B11 where B13 is expected, or vice versa. No price difference. Probably arises from the operator copying formula rows across tier boundaries without adjusting the reference.
+
+**C using T24-in-store (B11 instead of B13):** rows 17 (lowe_s), 20 (best_buy), 32 (kohl_s), 40 (nordstrom), 41 (office_depot_officemax), 50 (target), 52 (tj_maxx_homegoods_marshalls), 56 (victoria_s_secret), 58 (walmart), 279 (bed_bath_beyond).
+
+**T24 using C-in-store (B13 instead of B11):** rows 31 (jimmy_john_s), 33 (kroger), 38 (meijer), 43 (shell), 54 (trader_joe_s).
+
+**v2 action:** none needed — values are identical. The reference discrepancy can be normalised in the seeder if desired, but it has no pricing effect.
+
+### 11.2 Systematic Z→C in-store drift (~100 merchants, probably deliberate)
+
+Nearly every Z-tier merchant (rows 84–247 and a handful of post-249 rows) references B13 (C-in-store = 25%) instead of B15 (Z-in-store = 29%). The scale of this — essentially the entire Z section — makes accidental drift implausible. Most likely the operator decided at some point to price Z merchants at competitive in-store margins, and the tier label became descriptive only.
+
+A few Z merchants are exceptions worth noting:
+- Row 30 (ikea_merch_credit, Z-tier): uses C-in-store like the rest of the Z section.
+- Row 282 (big_lots), 285 (christopher_banks), 289 (hooters), 290 (joann), 295 (old_country_buffet), 298 (rue_21), 299 (rite_aid): post-section Z rows, also use C-in-store.
+
+**v2 action:** confirm with operator that Z→C in-store is intentional. If yes, update the Z tier default in the seeder to 25% and document. If no, these margins will need individual review.
+
+### 11.3 NC→C in-store drift (probably deliberate section-level policy)
+
+Approximately 22 NC-tier merchants in rows 49–82 (pre-COVID-watch-list section) and a few later rows reference B13 (C = 25%) instead of B17 (NC = 30%) for in-store. Several also use C-in-mail (7%) instead of NC-in-mail (15%). The cluster of rows 61–82 was under a "COVID WATCH LIST" section header — it's plausible the operator deliberately set these merchants to competitive pricing during a period of uncertainty about their viability.
+
+Affected rows: 49 (subway), 51 (target_merch_credit), 53 (tjm_homegoods_marshalls_merch_credit), 61 (amc_theaters), 62 (ann_taylor_loft), 63 (best_western†), 65 (bravo_cucina_italiana), 66 (brooks_brothers), 67 (build_a_bear), 68 (carter_s), 69 (cinemark†), 71 (fandango), 72 (gnc), 73 (goodrich_quality_theaters), 75 (lands_end_kmart_sears), 76 (lane_bryant), 78 (marriott†), 79 (movietickets_com), 80 (regal_entertainment_group), 81 (ruby_tuesday†), 82 (ticketmaster), 287 (forever_21).
+
+†Also uses C-in-mail (7%) instead of NC-in-mail (15%).
+
+**v2 action:** ask operator whether NC→C is a standing policy for this group or historical artifact to clean up.
+
+### 11.4 Outliers worth querying individually
+
+These don't fit the systematic patterns above and are more likely to be stale or intentional one-offs:
+
+| Row | Merchant | Drift | Note |
+|-----|----------|-------|------|
+| 26 | disney | C uses Z-in-store (29% vs expected 25%) | Operator more conservative; probably intentional |
+| 28 | harley_davidson | C uses Z-in-store (29% vs expected 25%) | Same — C merchant treated as harder to move |
+| 29 | ikea | C uses Z-in-store (29% vs expected 25%) | Same |
+| 37 | mcdonalds | C uses Z-in-store (29% vs expected 25%) | Same |
+| 36 | massage_envy | C uses NC-in-store (30% vs expected 25%) | Most conservative C merchant in the sheet |
+| 46 | speedway_fuel | T24 uses NC-in-store (30% vs expected 25%) | Largest jump: T24 merchant at NC margins. Possibly stale from a tier demotion that was later reversed. Worth asking. |
+| 55 | verizon | NC uses Z-in-store+mail (29%/11% vs expected 30%/15%) | Slightly more favorable than NC. Probably stale from when Verizon was Z-tier. |
+| 64 | black_angus | NC uses Z-in-store+mail | Same pattern as Verizon — may have been Z previously |
+| 74 | kona_grill | NC uses Z-in-store+mail | Same |
+| 77 | logan_s_roadhouse | NC uses Z-in-store+mail | Same |
+| 18 | lowes_merch_credit_no_id | NC uses C-in-store (25% vs 30%) | Merch credit variant; consistent with §11.3 policy |
+
+**v2 action:** row 46 (Speedway Fuel) is the biggest anomaly — a T24 merchant at NC margins is a 5% spread difference that is hard to explain as deliberate. The Z-in-store group for NC restaurants (rows 55, 64, 74, 77) suggests a cohort that was once Z-tier. Ask the operator about both groups before any v2 repricing.
