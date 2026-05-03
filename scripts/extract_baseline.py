@@ -3,9 +3,15 @@ Baseline extraction report for GiftCardPricingData_2025.xlsx.
 
 Usage:
   uv run python scripts/extract_baseline.py [WORKBOOK_PATH] [--output FILE]
+                                             [--emit-json PATH]
 
-Exit code: 0 if zero mismatches, 1 if any mismatch.
+Exit code: 0 if zero unexplained mismatches, 1 if any unexplained mismatch.
 Bankrupt-broken and section-divider rows are exclusions, not mismatches.
+Rows in DOCUMENTED_EXCLUSIONS are also excluded (confirmed spreadsheet typos).
+
+--emit-json: emit tests/fixtures/spreadsheet_baseline.json (or the given path)
+             only when every remaining mismatch is in DOCUMENTED_EXCLUSIONS.
+             Exits 1 and refuses to write if any unexplained mismatch exists.
 
 Confidence note: the spreadsheet has no confidence input, so we pass "high"
 to compute_prices for all rows.  Confidence affects PriceRecommendation.confidence
@@ -15,6 +21,7 @@ but NOT the four numeric outputs, so it does not affect the diff.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,6 +38,13 @@ from spreadsheet_parser import (
     parse_workbook,
     read_global_constants,
 )
+
+# Rows excluded from the golden baseline due to confirmed spreadsheet typos.
+# E formula uses InputsandMargins!$B$9 (in_mail_bad_debt) instead of $B$8
+# (in_store_bad_debt). Diff is exactly 0.028 in the in-store column.
+# See decisions_log.md 2026-05-02 and spreadsheet_recon.md §10.
+# DO NOT expand without explicit approval for each addition.
+DOCUMENTED_EXCLUSIONS: frozenset[int] = frozenset({44, 45, 46, 70})
 
 _DEFAULT_WORKBOOK = Path(
     r"C:\Users\kandt\OneDrive - Umich\Zeal Cards\Pricing\GiftCardPricingData_2025.xlsx"
@@ -142,6 +156,13 @@ def main() -> int:
         help="Path to GiftCardPricingData_2025.xlsx",
     )
     parser.add_argument("--output", "-o", type=Path, default=None, help="Write report to file")
+    parser.add_argument(
+        "--emit-json",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Emit baseline JSON to PATH (only when no unexplained mismatches remain)",
+    )
     args = parser.parse_args()
 
     workbook_path: Path = args.workbook
@@ -157,7 +178,7 @@ def main() -> int:
     print(f"Parsing {workbook_path.name} …")
     parsed_rows = parse_workbook(workbook_path)
 
-    lines, mismatch_count = _build_report(workbook_path, constants, parsed_rows)
+    lines, mismatch_rows = _build_report(workbook_path, constants, parsed_rows)
 
     report = "\n".join(lines)
     print(report)
@@ -166,15 +187,35 @@ def main() -> int:
         args.output.write_text(report, encoding="utf-8")
         print(f"\nReport written to {args.output}", file=sys.stderr)
 
-    return 1 if mismatch_count else 0
+    # Unexplained mismatches = mismatches not in the documented exclusions list
+    unexplained = [r for r in mismatch_rows if r.row_number not in DOCUMENTED_EXCLUSIONS]
+
+    if args.emit_json:
+        if unexplained:
+            print(
+                "\nERROR: refusing to emit JSON — unexplained mismatches present:",
+                file=sys.stderr,
+            )
+            for r in unexplained:
+                print(f"  row {r.row_number}: {r.merchant_id}", file=sys.stderr)
+            return 1
+        json_path: Path = args.emit_json
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        records = _build_json_records(parsed_rows)
+        json_path.write_text(
+            json.dumps(records, sort_keys=True, indent=2), encoding="utf-8"
+        )
+        print(f"\nBaseline JSON written to {json_path} ({len(records)} records)", file=sys.stderr)
+
+    return 1 if unexplained else 0
 
 
 def _build_report(
     workbook_path: Path,
     constants: GlobalConstants,
     parsed_rows: list[ParsedRow],
-) -> tuple[list[str], int]:
-    """Return (report_lines, mismatch_count)."""
+) -> tuple[list[str], list[ParsedRow]]:
+    """Return (report_lines, mismatch_rows)."""
     lines: list[str] = []
     ts = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -375,7 +416,77 @@ def _build_report(
         lines += audit_drifts
     lines.append("")
 
-    return lines, len(mismatches)
+    return lines, mismatches
+
+
+def _build_json_records(parsed_rows: list[ParsedRow]) -> list[dict]:
+    """Build the list of JSON records for the baseline fixture file.
+
+    Includes every "normal" and "no_ebay_data_local" row except DOCUMENTED_EXCLUSIONS.
+    """
+    records = []
+    for parsed in parsed_rows:
+        if parsed.classification not in ("normal", "no_ebay_data_local"):
+            continue
+        if parsed.row_number in DOCUMENTED_EXCLUSIONS:
+            continue
+        assert parsed.config is not None and parsed.spreadsheet_outputs is not None
+
+        cfg = parsed.config
+        ss = parsed.spreadsheet_outputs
+
+        # Guard: mirror the same e_bonus patch used in _build_report so engine runs cleanly.
+        if cfg.electronic_eligible and cfg.e_bonus is None and cfg.electronic_buy_override is None:
+            cfg = cfg.model_copy(update={"electronic_eligible": False})
+
+        # Build expected dict + sentinels
+        expected: dict[str, float | None] = {}
+        expected_sentinels: dict[str, str] = {}
+
+        for channel, ss_val in [
+            ("online_sell", ss.online_sell),
+            ("in_mail_buy", ss.in_mail_buy),
+            ("in_store_buy", ss.in_store_buy),
+            ("electronic_buy", ss.electronic_buy),
+        ]:
+            if isinstance(ss_val, str):
+                # Sentinel value (e.g. "No") — record null + note sentinel
+                expected[channel] = None
+                expected_sentinels[channel] = ss_val
+            elif isinstance(ss_val, (int, float)):
+                expected[channel] = float(ss_val)
+            else:
+                expected[channel] = None
+
+        record: dict = {
+            "row_number": parsed.row_number,
+            "merchant_id": parsed.merchant_id,
+            "display_name": parsed.display_name,
+            "tier": parsed.tier,
+            "ebay_sell_input": parsed.ebay_sell_input,
+            "config": {
+                "merchant_id": cfg.merchant_id,
+                "display_name": cfg.display_name,
+                "tier": cfg.tier,
+                "merch_credit_variant": cfg.merch_credit_variant,
+                "in_store_margin": cfg.in_store_margin,
+                "in_mail_margin": cfg.in_mail_margin,
+                "e_bonus": cfg.e_bonus,
+                "ebay_differential": cfg.ebay_differential,
+                "in_store_eligible": cfg.in_store_eligible,
+                "in_mail_eligible": cfg.in_mail_eligible,
+                "electronic_eligible": cfg.electronic_eligible,
+                "online_sell_override": cfg.online_sell_override,
+                "electronic_buy_override": cfg.electronic_buy_override,
+            },
+            "expected": expected,
+        }
+        if expected_sentinels:
+            record["expected_sentinels"] = expected_sentinels
+
+        records.append(record)
+
+    return records
 
 
 if __name__ == "__main__":

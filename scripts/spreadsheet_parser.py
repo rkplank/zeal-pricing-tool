@@ -5,7 +5,7 @@ Public API:
   parse_workbook(path: Path) -> list[ParsedRow]
   read_global_constants(wb_v) -> GlobalConstants
   slugify(display_name: str) -> str
-  classify_row(name_val, b_val, f_val) -> str
+  classify_row(name_val, b_val, f_val, f_formula) -> str
   extract_formula_refs(formula) -> list[str]
 """
 
@@ -126,15 +126,25 @@ def classify_row(
     name_val: object,
     b_val: object,
     f_val: object,
+    f_formula: object,
 ) -> Literal["normal", "no_ebay_data_local", "bankrupt_broken", "section_divider", "skip_blank"]:
     if not isinstance(name_val, str) or not name_val.strip():
         return "skip_blank"
     if name_val.strip() in _SECTION_DIVIDER_NAMES:
         return "section_divider"
-    if isinstance(b_val, (int, float)):
-        return "normal"
-    # B is non-numeric — Pattern A (F is hardcoded number) vs Pattern C (all #VALUE!)
-    if isinstance(f_val, (int, float)):
+    # F-column is the type signal (decisions_log.md 2026-05-02).
+    # Operator-inserted AVERAGE summary rows look numeric in data_only mode but
+    # have "=AVERAGE(...)" formulas — detect them before the numeric check.
+    if isinstance(f_formula, str) and f_formula.startswith("=AVERAGE("):
+        return "section_divider"
+    if isinstance(f_formula, str) and f_formula.startswith("="):
+        # F is a real formula. It computes correctly for normal rows; it cascades
+        # #VALUE! (→ f_val=None) for bankrupt-broken rows where B is text.
+        if isinstance(f_val, (int, float)):
+            return "normal"
+        return "bankrupt_broken"
+    # F is a literal number (no formula) — Pattern A merchant with hardcoded online_sell.
+    if isinstance(f_formula, (int, float)):
         return "no_ebay_data_local"
     return "bankrupt_broken"
 
@@ -236,8 +246,9 @@ def parse_workbook(workbook_path: Path) -> list[ParsedRow]:
         name_v = val(COL_NAME)
         b_v = val(COL_EBAY)
         f_v = val(COL_ONLINE)
+        f_formula_v = fml(COL_ONLINE)
 
-        cls = classify_row(name_v, b_v, f_v)
+        cls = classify_row(name_v, b_v, f_v, f_formula_v)
 
         # ---- non-merchant rows -----------------------------------------
         if cls in ("skip_blank", "section_divider"):
@@ -313,11 +324,11 @@ def parse_workbook(workbook_path: Path) -> list[ParsedRow]:
         ebay_sell_input: float | None = float(b_v) if isinstance(b_v, (int, float)) else None
 
         # Pattern A: F is a hardcoded number (formula-mode shows literal, not "=...")
-        f_fml = fml(COL_ONLINE)
+        # f_formula_v already read before classify_row; reuse it here.
         online_sell_override: float | None = None
         if cls == "no_ebay_data_local":
-            if isinstance(f_fml, (int, float)):
-                online_sell_override = float(f_fml)
+            if isinstance(f_formula_v, (int, float)):
+                online_sell_override = float(f_formula_v)
             elif isinstance(f_v, (int, float)):
                 online_sell_override = float(f_v)
 
@@ -327,7 +338,7 @@ def parse_workbook(workbook_path: Path) -> list[ParsedRow]:
         e_fml = fml(COL_INSTORE)
 
         formula_refs: dict[str, list[str]] = {
-            "online_sell": extract_formula_refs(f_fml),
+            "online_sell": extract_formula_refs(f_formula_v),
             "in_mail_buy": extract_formula_refs(c_fml),
             "in_store_buy": extract_formula_refs(e_fml),
             "electronic_buy": extract_formula_refs(d_fml),

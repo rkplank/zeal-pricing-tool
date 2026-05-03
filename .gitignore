@@ -32,3 +32,6 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated extraction report — regenerated on demand, not committed
+baseline_report.txt

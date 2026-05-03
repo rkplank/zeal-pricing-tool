@@ -133,28 +133,46 @@ Bankrupt merchants where someone replaced B with text rather than restructuring 
 - **Action:** detect, log, exclude from baseline. Not a real merchant for v1.
 
 ### 4.5 Type "section_divider"
-Non-merchant rows used to label sections of the sheet.
-- A: literal string like `"PHYSICAL ONLY"`, `"Bankrupt"`, or `"Merchant"` (the original header repeated mid-sheet)
-- B–F: blank, or contain `=AVERAGE(...)` summary stats (row 249 has averages over its preceding section)
-- **Examples:** row 249 (`PHYSICAL ONLY`), row 278 (`Bankrupt`).
-- **Action:** skip entirely.
+Non-merchant rows used to label sections of the sheet. Two detection patterns:
+
+**Name-keyed dividers** — A contains a known section label:
+- Literal strings: `"PHYSICAL ONLY"`, `"Bankrupt"`, `"Merchant"` (the original header repeated mid-sheet)
+- Examples: row 249 (`PHYSICAL ONLY`), row 278 (`Bankrupt`).
+
+**Formula-keyed aggregates** — F column contains `=AVERAGE(...)`:
+- Operator-inserted summary rows showing section averages for visibility, not merchant pricing.
+- F-column `=AVERAGE(...)` formula → treat identically to name-keyed dividers.
+- Examples (all reclassified 2026-05-02):
+  - Row 19: `BREAD AND BUTTER` — `=AVERAGE(F3:F18)`
+  - Row 60: `TOP CARDS` — `=AVERAGE(F21:F59)`
+  - Row 83: `COVID WATCH LIST` — `=AVERAGE(F62:F82)`
+  - Row 210: `TAKE ONLINE` — `=AVERAGE(...)`
+  - Row 276: `LOCAL` — `=AVERAGE(...)`
+
+**Action:** skip entirely. No merchant_id, no config, excluded from baseline.
 
 ### 4.6 Classification logic (sketch for parser)
 
+**F-column is the source of truth for row type** because the downstream channels (C, D, E) compute from F, not B. B-column values can be stale or misleading — notably, row 253 Biggby Coffee has a numeric B (0.668) but F is a hardcoded literal (0.75), making it a Pattern A merchant that the old B-keyed rule mis-classified as "normal". See decisions_log.md 2026-05-02.
+
 ```python
-def classify_row(row):
-    name = row[A]
-    if not isinstance(name, str) or not name.strip():
+def classify_row(name_val, b_val, f_val, f_formula):
+    # f_val: cached value from data_only workbook
+    # f_formula: raw cell value from formula workbook (formula str or literal)
+    if not isinstance(name_val, str) or not name_val.strip():
         return "skip_blank"
-    if name in {"Merchant", "PHYSICAL ONLY", "Bankrupt"}:
+    if name_val.strip() in {"Merchant", "PHYSICAL ONLY", "Bankrupt"}:
         return "section_divider"
-    b, f = row[B], row[F]
-    if isinstance(b, (int, float)):
-        return "normal"  # may still have ineligible channels in C/D/E
-    # B is non-numeric — disambiguate Pattern A vs Pattern C
-    if isinstance(f, (int, float)):
-        return "no_ebay_data_local"  # F is the manual input
-    return "bankrupt_broken"  # all outputs are errors
+    if isinstance(f_formula, str) and f_formula.startswith("=AVERAGE("):
+        return "section_divider"   # operator-inserted aggregate row
+    if isinstance(f_formula, str) and f_formula.startswith("="):
+        # F is a real formula; normal if it computed, bankrupt_broken if it errored
+        if isinstance(f_val, (int, float)):
+            return "normal"
+        return "bankrupt_broken"
+    if isinstance(f_formula, (int, float)):
+        return "no_ebay_data_local"   # F is a hardcoded literal (Pattern A)
+    return "bankrupt_broken"
 ```
 
 Channel-ineligibility (`"No"` in C/D/E) is orthogonal to row type — a "normal" row can still have one or more channels marked `"No"`. Detect after classification.
@@ -272,10 +290,25 @@ Concrete decisions baked in by the recon:
 6. **Bankrupt-broken rows are documented exclusions**, not failures. The parser report should list them by row number and merchant name.
 7. **Section dividers and blank rows are silent skips** — no logging needed beyond a count.
 8. **Merch-credit variant flag** uses the §7.4 substring rule.
-9. **Total expected baseline record count:** 295 rows total minus 2 dividers (249, 278) minus 3 bankrupt-broken (280, 281, 283) ≈ 290 records. Confirm during parser session.
+9. **Total expected baseline record count:** 295 rows total minus 7 dividers (8, 249, 278, 19, 60, 83, 210, 276) minus 4 bankrupt-broken (275, 280, 281, 283) minus 4 documented exclusions (44, 45, 46, 70) ≈ 280 baseline records. Confirm exact count from extraction report.
 
 The parser report (from the parser session) should produce:
 - Row-by-row classification (normal / no_ebay_data_local / channel_ineligible / bankrupt_broken / section_divider / skip_blank)
 - For each `normal` and `no_ebay_data_local` row: extracted config + spreadsheet's computed values + engine's recomputed values + diff
 - Total counts per type
 - A "spec deviations" log: any merchant whose config doesn't match its tier's expected references (this is expected per algorithm spec §3, but the report quantifies the drift).
+
+---
+
+## 10. Documented baseline exclusions
+
+These rows are excluded from the golden test (`tests/fixtures/spreadsheet_baseline.json`) by design. The engine is correct for all four; the spreadsheet contains typos. Exclusions are encoded in `DOCUMENTED_EXCLUSIONS` in `scripts/extract_baseline.py` — do not expand this list without explicit approval for each addition.
+
+| Row | Merchant | Typo description |
+|-----|----------|-----------------|
+| 44 | Southwest | E formula references `InputsandMargins!$B$9` (in_mail_bad_debt = 2.0%) instead of `$B$8` (in_store_bad_debt = 4.8%). Diff is exactly 0.028 in the in-store column. |
+| 45 | Speedway - Food and Merch | Same B9/B8 typo in E formula. |
+| 46 | Speedway - Fuel | Same B9/B8 typo in E formula. |
+| 70 | Family Dollar | Same B9/B8 typo in E formula. |
+
+**Rationale:** Confirmed typos by operator (decisions_log.md 2026-05-02). The four merchants do not have a different in-store fraud rate. The engine uses `in_store_bad_debt` (B8 = 4.8%) for in-store buys per spec §5.3, which is correct. When these merchants are seeded into SQLite, they receive their correct margin/bad-debt values, not the spreadsheet's typo'd computation. The exclusion is from the baseline *test* only — they are valid production merchants.

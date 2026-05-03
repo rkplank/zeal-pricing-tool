@@ -62,32 +62,38 @@ def test_slugify(display_name: str, expected_slug: str) -> None:
 # ---------------------------------------------------------------------------
 
 _CLASSIFY_CASES = [
-    # (name_val, b_val, f_val, expected_classification)
-    # normal: name is string, B is numeric
-    ("Mastercard", 1.05, None, "normal"),
-    ("Home Depot", 0.92, None, "normal"),
-    # no_ebay_data_local (Pattern A): B is "N/A", F is a number
-    ("Andiamo", "N/A", 0.65, "no_ebay_data_local"),
-    ("Plum Market", "N/A", 0.75, "no_ebay_data_local"),
-    # bankrupt_broken: B is text, F is None (#VALUE!)
-    ("Avenue", "N/A", None, "bankrupt_broken"),
-    ("Bebe", "No Data", None, "bankrupt_broken"),
-    # section_divider
-    ("PHYSICAL ONLY", None, None, "section_divider"),
-    ("Bankrupt", None, None, "section_divider"),
-    ("Merchant", None, None, "section_divider"),
+    # (name_val, b_val, f_val, f_formula, expected_classification)
+    # normal: F is a formula (not AVERAGE) and it computed a valid number
+    ("Mastercard", 1.05, 1.005, "=B3-InputsandMargins!$B$23", "normal"),
+    ("Home Depot", 0.92, 0.875, "=B11-InputsandMargins!$B$23", "normal"),
+    # no_ebay_data_local (Pattern A): F is a literal number — f_formula is numeric, not a str
+    ("Andiamo", "N/A", 0.65, 0.65, "no_ebay_data_local"),
+    ("Plum Market", "N/A", 0.75, 0.75, "no_ebay_data_local"),
+    # Biggby Coffee (row 253): B is numeric but F is a literal — must be no_ebay_data_local
+    # (old B-keyed rule mis-classified this as "normal")
+    ("Biggby Coffee", 0.668, 0.75, 0.75, "no_ebay_data_local"),
+    # bankrupt_broken: F is a formula but evaluates to #VALUE! (f_val=None)
+    ("Avenue", "N/A", None, "=B280-InputsandMargins!$B$23", "bankrupt_broken"),
+    ("Bebe", "No Data", None, "=B281-InputsandMargins!$B$23", "bankrupt_broken"),
+    # section_divider: name-keyed dividers
+    ("PHYSICAL ONLY", None, None, None, "section_divider"),
+    ("Bankrupt", None, None, None, "section_divider"),
+    ("Merchant", None, None, None, "section_divider"),
+    # section_divider: AVERAGE formula in F — operator-inserted aggregate rows
+    ("BREAD AND BUTTER", None, 0.91, "=AVERAGE(F3:F18)", "section_divider"),
+    ("TOP CARDS", None, 0.88, "=AVERAGE(F21:F59)", "section_divider"),
     # skip_blank
-    (None, None, None, "skip_blank"),
-    ("", None, None, "skip_blank"),
-    ("   ", None, None, "skip_blank"),
+    (None, None, None, None, "skip_blank"),
+    ("", None, None, None, "skip_blank"),
+    ("   ", None, None, None, "skip_blank"),
 ]
 
 
-@pytest.mark.parametrize("name_val,b_val,f_val,expected", _CLASSIFY_CASES)
+@pytest.mark.parametrize("name_val,b_val,f_val,f_formula,expected", _CLASSIFY_CASES)
 def test_classify_row(
-    name_val: object, b_val: object, f_val: object, expected: str
+    name_val: object, b_val: object, f_val: object, f_formula: object, expected: str
 ) -> None:
-    assert classify_row(name_val, b_val, f_val) == expected
+    assert classify_row(name_val, b_val, f_val, f_formula) == expected
 
 
 # ---------------------------------------------------------------------------
