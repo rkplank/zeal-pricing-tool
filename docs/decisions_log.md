@@ -168,3 +168,39 @@ Format: date, decision, alternatives considered, rationale.
 **Alternatives:** Display buy/sell prices as dollar amounts for a given face value (e.g. "buy at $0.92 per $1.00" → show "$92.00 for a $100 card").
 
 **Rationale:** Operator confirmed during session 5 that percentages are the right unit for the dashboard. Percentages are already the internal representation (all values stored and computed as fractions of face value per CLAUDE.md), so no conversion layer is needed for v1. Dollar-amount display can be added at the display layer later if the operator changes his mind, without touching the engine. See pricing_algorithm.md Q6.
+
+---
+
+## 2026-05-04 — v1 scope expanded with four enhanced features and competitor data layer
+
+**Alternatives:** (a) ship faithful port only, defer all enhancements to post-feedback work; (b) add only the four "strong-recommend" features (extended exclusions, risk flag, CSV export, formula breakdown); (c) add all eleven proposed scope revisions; (d) the chosen path: four strong-recommend features plus competitor data integration.
+
+**Rationale:** Three pieces of project context shifted the calculus from a minimal-v1 framing toward a more ambitious one. First, no fixed deadline — v1 ships when it's ready to show the operator, not on a schedule. Second, the operator goal is to *improve* the existing workflow, not just port it; competitor pricing has always been part of his manual process (the original RFP references Cardpool and GiftCardZen) and "a more accurate pricing tool" is a stated objective. Third, the project is explicitly experimental and iterative — features that don't earn their keep can be removed cheaply, which lowers the bar for inclusion.
+
+The four strong-recommend features (extended eBay exclusions, risk/watchlist flag, CSV export, formula breakdown) earn inclusion on operational grounds independent of timeline: extended exclusions are hygiene on a filter that's already specified; the risk flag prevents accidental acceptance of known-bad merchants; CSV export bridges the tool to the operator's downstream workflow; formula breakdown is the highest trust-yield feature in the proposal.
+
+Competitor data is included on the strength of the operator's stated goal. Implementation is staged: schema and manual import path in v1's first build, CardCash scraper as the first automated source, Raise as the second, Cardpool and GiftCardGranny deferred to post-feedback work. This staging protects against the operational risk of shipping four scrapers simultaneously before any have been validated against operator judgment.
+
+Six revisions deferred to post-feedback work: recency-weighted eBay average, override reason codes, drift-audit dashboard surfacing, full data-quality dashboard, partial-balance parsing, and additional competitor sources beyond CardCash/Raise. Each is a reasonable idea whose value is best assessed after the operator has used the tool.
+
+---
+
+## 2026-05-04 — Competitor data integration via Path A: per-merchant eBay weight, single float, applied to three channels
+
+**Alternatives:** (a) Path A — operator-controlled blending weight per merchant, defaulting to 1.0 (eBay-only, matches spreadsheet); (b) Path B — system-opinionated default weight (e.g. 70/30 eBay/competitor for high-confidence merchants), operator-overridable; (c) competitor data displayed alongside eBay recommendation but never blended; (d) separate weights per channel rather than one weight per merchant.
+
+**Rationale:** Path A preserves the spreadsheet-faithful baseline as the day-one default — every merchant starts at `ebay_weight = 1.0`, making v1 algorithmically equivalent to the spreadsheet until the operator chooses otherwise. This protects the validation property established by Phase 1's golden tests. The operator dials competitor weight up over time as competitor data accumulates and as he develops trust in the blended signal.
+
+A single per-merchant weight rather than per-channel weights keeps the configuration surface small. If a specific channel needs different treatment, the operator can override the recommendation directly through the existing override flow — channel-level weights would be a config burden not yet justified by observed need.
+
+System-opinionated defaults (Path B) were rejected for v1 on epistemic grounds: choosing 70/30 vs 50/50 requires knowing what "better" means, which the project doesn't yet have evidence for. Path B becomes a reasonable evolution if operator-tuned weights cluster around predictable values across merchants.
+
+Competitor data informs three of the four channels: `online_sell`, `in_mail_buy`, and `electronic_buy`. The `in_store_buy` channel has no clean competitor analogue (no major competitor operates physical storefronts) and continues to compute from the eBay-derived value only. Confidence is computed independently per source; the blending weight is operator-set and does not auto-adjust based on confidence. Less automation, more operator control — the right default for a tool the operator should learn before it learns him.
+
+---
+
+## 2026-05-04 — Formula breakdown implemented engine-side, exposed via PriceRecommendation return type
+
+**Alternatives:** (a) compute the breakdown in the dashboard template using merchant config and global constants; (b) extend the pricing engine to return a structured breakdown alongside the final price.
+
+**Rationale:** Engine-side keeps the engine as the single source of truth for pricing logic. The breakdown is part of the engine's contract, verifiable by tests, and rendered by templates that are pure presentation. Template-side breakdown computation works but introduces drift risk: any change to engine formulas would require parallel updates to templates with no automated check that they stay synchronized.
