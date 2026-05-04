@@ -1,6 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+type RiskStatus = Literal["normal", "watch", "paused", "no_buy"]
 
 
 class MerchantConfig(BaseModel):
@@ -17,6 +19,9 @@ class MerchantConfig(BaseModel):
     e_bonus: float | None = None
     online_sell_override: float | None = None
     electronic_buy_override: float | None = None
+    ebay_weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    risk_status: RiskStatus = "normal"
+    risk_note: str | None = None
     notes: str | None = None
 
 

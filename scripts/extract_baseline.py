@@ -28,7 +28,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from zeal.models.pricing import GlobalConstants
+from zeal.models.pricing import CompetitorAggregate, GlobalConstants
 from zeal.pricing.engine import compute_prices
 
 # scripts/ is not a package; import sibling module directly
@@ -306,13 +306,17 @@ def _build_report(
             cfg = cfg.model_copy(update={"electronic_eligible": False})
             extra_note = "e_bonus_unresolved: electronic_eligible forced False"
 
-        result = compute_prices(ebay_pct, "high", cfg, constants)
+        result = compute_prices(ebay_pct, "high", CompetitorAggregate(), cfg, constants)
 
-        os_ok, os_d = _channel_diff(ss.online_sell, result.online_sell, True)
-        im_ok, im_d = _channel_diff(ss.in_mail_buy, result.in_mail_buy, cfg.in_mail_eligible)
-        is_ok, is_d = _channel_diff(ss.in_store_buy, result.in_store_buy, cfg.in_store_eligible)
+        os_ok, os_d = _channel_diff(ss.online_sell, result.online_sell.final_value, True)
+        im_ok, im_d = _channel_diff(
+            ss.in_mail_buy, result.in_mail_buy.final_value, cfg.in_mail_eligible
+        )
+        is_ok, is_d = _channel_diff(
+            ss.in_store_buy, result.in_store_buy.final_value, cfg.in_store_eligible
+        )
         eb_ok, eb_d = _channel_diff(
-            ss.electronic_buy, result.electronic_buy, cfg.electronic_eligible
+            ss.electronic_buy, result.electronic_buy.final_value, cfg.electronic_eligible
         )
 
         all_ok = os_ok and im_ok and is_ok and eb_ok
@@ -374,7 +378,9 @@ def _build_report(
             )
             if needs_guard:
                 cfg = cfg.model_copy(update={"electronic_eligible": False})
-            result = compute_prices(parsed.ebay_sell_input, "high", cfg, constants)
+            result = compute_prices(
+                parsed.ebay_sell_input, "high", CompetitorAggregate(), cfg, constants
+            )
             lines += [
                 "",
                 f"Row {parsed.row_number} — {parsed.merchant_id}",
@@ -401,10 +407,10 @@ def _build_report(
                 f"    in_store_buy = {ss.in_store_buy}",
                 f"    electronic   = {ss.electronic_buy}",
                 "  Engine outputs:",
-                f"    online_sell  = {result.online_sell}",
-                f"    in_mail_buy  = {result.in_mail_buy}",
-                f"    in_store_buy = {result.in_store_buy}",
-                f"    electronic   = {result.electronic_buy}",
+                f"    online_sell  = {result.online_sell.final_value}",
+                f"    in_mail_buy  = {result.in_mail_buy.final_value}",
+                f"    in_store_buy = {result.in_store_buy.final_value}",
+                f"    electronic   = {result.electronic_buy.final_value}",
             ]
     lines.append("")
 

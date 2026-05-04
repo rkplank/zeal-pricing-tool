@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 type Confidence = Literal["high", "medium", "low", "none"]
+type ValidityStatus = Literal["valid", "excluded", "suspicious"]
 
 
 class EbayObservation(BaseModel):
@@ -12,6 +13,8 @@ class EbayObservation(BaseModel):
     face_value: float
     sale_price: float
     title: str
+    validity_status: ValidityStatus = "valid"
+    exclusion_reason: str | None = None
     id: int | None = None
     raw_payload: str | None = None
     fetched_at: str = ""

@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS merchants (
     electronic_eligible      INTEGER NOT NULL CHECK (electronic_eligible IN (0,1)),
     online_sell_override     REAL,
     electronic_buy_override  REAL,
+    ebay_weight              REAL NOT NULL DEFAULT 1.0 CHECK (ebay_weight >= 0.0 AND ebay_weight <= 1.0),
+    risk_status              TEXT NOT NULL DEFAULT 'normal' CHECK (risk_status IN ('normal','watch','paused','no_buy')),
+    risk_note                TEXT,
     merch_credit_variant     INTEGER NOT NULL CHECK (merch_credit_variant IN (0,1)),
     inclusion_regex          TEXT NOT NULL,
     exclusion_regex          TEXT,
@@ -57,12 +60,17 @@ CREATE TABLE IF NOT EXISTS ebay_observations (
     face_value    REAL NOT NULL,
     sale_price    REAL NOT NULL,
     title         TEXT NOT NULL,
+    validity_status TEXT NOT NULL DEFAULT 'valid' CHECK (validity_status IN ('valid','excluded','suspicious')),
+    exclusion_reason TEXT,
     raw_payload   TEXT,
     fetched_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_obs_merchant_date
     ON ebay_observations(merchant_id, sold_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_obs_merchant_validity
+    ON ebay_observations(merchant_id, validity_status);
 
 CREATE TABLE IF NOT EXISTS ebay_summary (
     merchant_id              TEXT NOT NULL REFERENCES merchants(merchant_id),
@@ -73,6 +81,36 @@ CREATE TABLE IF NOT EXISTS ebay_summary (
     confidence               TEXT NOT NULL CHECK (confidence IN ('high','medium','low','none')),
     PRIMARY KEY (merchant_id, summary_date)
 );
+
+CREATE TABLE IF NOT EXISTS competitor_sources (
+    source_name                TEXT PRIMARY KEY,
+    is_active                  INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0,1)),
+    collection_method          TEXT NOT NULL CHECK (collection_method IN ('scraper','manual','csv_import')),
+    refresh_interval_days      INTEGER NOT NULL,
+    last_successful_refresh    TEXT,
+    last_attempted_refresh     TEXT,
+    notes                      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS competitor_observations (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    merchant_id    TEXT NOT NULL REFERENCES merchants(merchant_id),
+    source_name    TEXT NOT NULL REFERENCES competitor_sources(source_name),
+    channel        TEXT NOT NULL CHECK (channel IN ('buy_mail','buy_electronic','sell','marketplace_sell')),
+    price_pct      REAL,
+    availability   TEXT NOT NULL CHECK (availability IN ('available','unavailable','no_data')),
+    confidence     TEXT NOT NULL CHECK (confidence IN ('high','medium','low','none')),
+    observed_at    TEXT NOT NULL,
+    source_url     TEXT,
+    raw_payload    TEXT,
+    notes          TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_competitor_obs_merchant_source_date
+    ON competitor_observations(merchant_id, source_name, observed_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_competitor_obs_observed_at
+    ON competitor_observations(observed_at DESC);
 
 CREATE TABLE IF NOT EXISTS price_recommendations (
     id                          INTEGER PRIMARY KEY AUTOINCREMENT,
