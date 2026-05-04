@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from zeal.models.merchant import MerchantConfig
-from zeal.models.pricing import GlobalConstants
+from zeal.models.pricing import CompetitorAggregate, GlobalConstants
 from zeal.pricing.engine import compute_prices
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "spreadsheet_baseline.json"
@@ -65,15 +65,26 @@ def test_engine_matches_spreadsheet_baseline(baseline_record: dict) -> None:
     cfg = MerchantConfig(**baseline_record["config"])
     ebay_pct: float | None = baseline_record["ebay_sell_input"]
 
-    result = compute_prices(ebay_pct, "high", cfg, _CONSTANTS)
+    result = compute_prices(ebay_pct, "high", CompetitorAggregate(), cfg, _CONSTANTS)
 
     expected: dict = baseline_record["expected"]
     sentinels: dict = baseline_record.get("expected_sentinels", {})
 
-    _assert_channel("online_sell", expected["online_sell"], result.online_sell, sentinels)
-    _assert_channel("in_mail_buy", expected["in_mail_buy"], result.in_mail_buy, sentinels)
-    _assert_channel("in_store_buy", expected["in_store_buy"], result.in_store_buy, sentinels)
-    _assert_channel("electronic_buy", expected["electronic_buy"], result.electronic_buy, sentinels)
+    _assert_channel(
+        "online_sell", expected["online_sell"], result.online_sell.final_value, sentinels
+    )
+    _assert_channel(
+        "in_mail_buy", expected["in_mail_buy"], result.in_mail_buy.final_value, sentinels
+    )
+    _assert_channel(
+        "in_store_buy", expected["in_store_buy"], result.in_store_buy.final_value, sentinels
+    )
+    _assert_channel(
+        "electronic_buy",
+        expected["electronic_buy"],
+        result.electronic_buy.final_value,
+        sentinels,
+    )
 
 
 def _assert_channel(
@@ -83,8 +94,8 @@ def _assert_channel(
     sentinels: dict[str, str],
 ) -> None:
     if name in sentinels:
-        # Spreadsheet had a sentinel (e.g. "No").  Engine should return None or "No".
-        assert engine_val is None or engine_val == sentinels[name], (
+        # Spreadsheet had a sentinel (e.g. "No"). Engine should return the same sentinel.
+        assert engine_val == sentinels[name], (
             f"{name}: expected sentinel {sentinels[name]!r}, got {engine_val!r}"
         )
         return

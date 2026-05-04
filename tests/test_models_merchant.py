@@ -28,6 +28,9 @@ def test_mastercard_normal_merchant() -> None:
     assert m.online_sell_override is None
     assert m.electronic_buy_override is None
     assert m.notes is None
+    assert m.ebay_weight == 1.0
+    assert m.risk_status == "normal"
+    assert m.risk_note is None
 
 
 def test_pattern_a_merchant_with_online_sell_override() -> None:
@@ -132,4 +135,21 @@ def test_invalid_tier_raises() -> None:
             in_mail_eligible=True,
             electronic_eligible=True,
             merch_credit_variant=False,
+        )
+
+
+def test_invalid_ebay_weight_raises() -> None:
+    with pytest.raises(ValidationError):
+        MerchantConfig(
+            merchant_id="test",
+            display_name="Test",
+            tier="C",
+            in_store_margin=0.25,
+            in_mail_margin=0.03,
+            ebay_differential=0.045,
+            in_store_eligible=True,
+            in_mail_eligible=True,
+            electronic_eligible=True,
+            merch_credit_variant=False,
+            ebay_weight=1.1,
         )

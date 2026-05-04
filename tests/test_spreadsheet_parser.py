@@ -143,7 +143,10 @@ def test_extract_formula_refs(formula: object, expected_refs: list[str]) -> None
     reason="workbook not present at default path",
 )
 def test_parse_workbook_smoke() -> None:
-    rows = parse_workbook(_DEFAULT_WORKBOOK)
+    try:
+        rows = parse_workbook(_DEFAULT_WORKBOOK)
+    except PermissionError as exc:
+        pytest.skip(f"workbook exists but is not readable: {exc}")
 
     assert len(rows) >= 200, f"Expected >= 200 rows, got {len(rows)}"
 

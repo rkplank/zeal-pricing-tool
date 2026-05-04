@@ -1,59 +1,85 @@
 # Zeal Pricing Tool
 
-A decision-support tool that recommends gift card buy and sell prices for [Zeal Cards](https://zealcards.com/), replacing a manual spreadsheet workflow.
+Zeal Pricing Tool is a local-first pricing decision-support tool for Zeal Cards.
+It helps a single operator review gift card buy and sell recommendations while
+preserving final human pricing authority. It is not automated price publishing.
 
-**Status:** Design phase — algorithm spec confirmed, architecture in progress. No code yet.
+## Current Status
 
-## What this is
+Phase 1 foundation is implemented:
 
-Zeal Cards buys and sells gift cards across hundreds of merchants. Pricing has historically been done manually using a spreadsheet that pulls market data from eBay and applies per-merchant margin rules. This tool automates the data collection and computation, surfacing recommendations through a dashboard.
+- Spreadsheet parser for the legacy workbook baseline
+- Pricing engine that validates spreadsheet-faithful behavior
+- SQLite schema scaffold
+- Golden baseline fixture covering the extracted spreadsheet records
+- Tests for parser behavior, merchant models, eBay averaging, confidence, schema,
+  and pricing formulas
 
-The operator retains full pricing authority. The tool is a guide, not an automated pricing system.
+The current codebase proves that the March 2022 spreadsheet logic can be ported
+faithfully. At default `ebay_weight = 1.0` with no competitor aggregate, the
+engine is expected to match the spreadsheet baseline within the golden-test
+tolerance.
 
-## What it does
+The revised v1 documents in `docs/` define the intended product direction:
+operator-facing recommendations with formula breakdowns, risk flags, eBay
+listing validity tracking, and future competitor blending. This repository is
+currently synchronized to that v1 scaffold, but live ingestion and the full
+dashboard are not complete.
 
-- Pulls daily sold-listing data from eBay for every tracked merchant
-- Applies the existing pricing logic (margins, channel costs, bad-debt rates) per merchant
-- Produces buy and sell price recommendations across four channels: in-store, in-mail, electronic, online sell
-- Flags low-confidence recommendations and large price movements for operator review
-- Logs every operator override, building a dataset for future algorithm improvements
+Phase 2 is pending client/operator clarification and confirmation of eBay
+sold-listings access. Do not assume live eBay collection, CardCash scraping,
+production refresh jobs, deployment scripts, or automated publishing are present.
 
-## What it isn't
+## Scope
 
-- Not an automated pricing system (operator approves every change)
-- Not integrated with the Zeal Cards website (separate tool; integration is a future possibility)
-- Not multi-user (designed for one operator)
+This tool is designed to be:
+
+- Local-first
+- Single-operator
+- Windows-targeted
+- SQLite-backed
+- A recommendation and review workflow, not an automated pricing system
 
 ## Documentation
 
-Design documents live in [`docs/`](./docs/):
+Source-of-truth planning documents live in `docs/`:
 
-- [`pricing_algorithm.md`](./docs/pricing_algorithm.md) — v1 algorithm specification (formulas, edge cases, v2 roadmap)
-- [`architecture.md`](./docs/architecture.md) — system design (stack, schema, components, deployment)
-- [`decisions_log.md`](./docs/decisions_log.md) — running record of design decisions and their rationale
+- `docs/pricing_algorithm.md` - v1 algorithm specification
+- `docs/architecture.md` - local architecture and data model direction
+- `docs/decisions_log.md` - design decisions and open questions
+- `docs/spreadsheet_recon.md` - spreadsheet reconciliation findings
 
-## Stack (planned)
+## Project Structure
 
-- Python 3.12+ with FastAPI
-- SQLite for storage
-- HTMX + Tailwind for the dashboard
-- Runs locally on Windows; data refreshes scheduled via Task Scheduler
-
-## Getting started
-
-The tool isn't built yet. Once development begins, this section will cover installation, configuration, and daily use.
-
-## Project layout
-
-```
+```text
 zeal-pricing-tool/
-├── README.md
-├── docs/                  Design documents
-├── src/zeal/              Application code (forthcoming)
-├── tests/                 Test suite (forthcoming)
-├── scripts/               Setup and maintenance scripts (forthcoming)
-└── data/                  SQLite database (gitignored)
+|-- docs/                  v1 specs, architecture, decisions, recon notes
+|-- scripts/               spreadsheet extraction and baseline tooling
+|-- src/zeal/
+|   |-- db/                SQLite connection and schema
+|   |-- models/            Pydantic data models
+|   |-- pricing/           pure pricing, blending, filters, aggregation helpers
+|   |-- ingestion/         placeholder package for future ingestion work
+|   |-- jobs/              placeholder package for future refresh jobs
+|   `-- web/               placeholder package for future dashboard work
+|-- tests/                 unit tests and golden baseline test
+`-- data/                  local runtime data location
 ```
+
+## Development
+
+Install dependencies with the project environment manager, then run:
+
+```powershell
+ruff check .
+pytest
+mypy src
+```
+
+The golden baseline fixture is stored at
+`tests/fixtures/spreadsheet_baseline.json`. Parser behavior should remain
+faithful to the spreadsheet reconciliation notes; do not weaken row
+classification or merchant slug tests to make unrelated changes pass.
 
 ## License
 
