@@ -42,7 +42,7 @@ def test_cross_source_weighted_average() -> None:
     aggregate = aggregate_competitor_observations(
         [
             _obs("cardcash", "buy_mail", 0.74, "high", "2026-05-01T00:00:00Z"),
-            _obs("manual", "buy_mail", 0.70, "medium", "2026-05-02T00:00:00Z"),
+            _obs("other_source", "buy_mail", 0.70, "medium", "2026-05-02T00:00:00Z"),
         ],
         merchant_id="target",
         as_of=datetime(2026, 5, 4, tzinfo=UTC),

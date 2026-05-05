@@ -12,8 +12,6 @@ CREATE TABLE IF NOT EXISTS merchants (
     online_sell_override     REAL,
     electronic_buy_override  REAL,
     ebay_weight              REAL NOT NULL DEFAULT 1.0 CHECK (ebay_weight >= 0.0 AND ebay_weight <= 1.0),
-    risk_status              TEXT NOT NULL DEFAULT 'normal' CHECK (risk_status IN ('normal','watch','paused','no_buy')),
-    risk_note                TEXT,
     merch_credit_variant     INTEGER NOT NULL CHECK (merch_credit_variant IN (0,1)),
     inclusion_regex          TEXT NOT NULL,
     exclusion_regex          TEXT,
@@ -85,17 +83,19 @@ CREATE TABLE IF NOT EXISTS ebay_summary (
 CREATE TABLE IF NOT EXISTS competitor_sources (
     source_name                TEXT PRIMARY KEY,
     is_active                  INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0,1)),
-    collection_method          TEXT NOT NULL CHECK (collection_method IN ('scraper','manual','csv_import')),
-    refresh_interval_days      INTEGER NOT NULL,
+    collection_method          TEXT NOT NULL CHECK (collection_method IN ('scraper')),
+    refresh_interval_days      INTEGER NOT NULL DEFAULT 7,
     last_successful_refresh    TEXT,
     last_attempted_refresh     TEXT,
-    notes                      TEXT
+    notes                      TEXT,
+    created_at                 TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at                 TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS competitor_observations (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    merchant_id    TEXT NOT NULL REFERENCES merchants(merchant_id),
     source_name    TEXT NOT NULL REFERENCES competitor_sources(source_name),
+    merchant_id    TEXT NOT NULL REFERENCES merchants(merchant_id),
     channel        TEXT NOT NULL CHECK (channel IN ('buy_mail','buy_electronic','sell','marketplace_sell')),
     price_pct      REAL,
     availability   TEXT NOT NULL CHECK (availability IN ('available','unavailable','no_data')),
@@ -103,68 +103,40 @@ CREATE TABLE IF NOT EXISTS competitor_observations (
     observed_at    TEXT NOT NULL,
     source_url     TEXT,
     raw_payload    TEXT,
-    notes          TEXT
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_competitor_obs_merchant_source_date
-    ON competitor_observations(merchant_id, source_name, observed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comp_obs_lookup
+    ON competitor_observations(source_name, merchant_id, channel, observed_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_competitor_obs_observed_at
-    ON competitor_observations(observed_at DESC);
+CREATE TABLE IF NOT EXISTS refresh_runs (
+    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    status                 TEXT NOT NULL CHECK (status IN ('running','completed','partial','failed')),
+    started_at             TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at           TEXT,
+    processed              INTEGER NOT NULL DEFAULT 0,
+    total                  INTEGER NOT NULL DEFAULT 0,
+    error                  TEXT
+);
 
 CREATE TABLE IF NOT EXISTS price_recommendations (
     id                          INTEGER PRIMARY KEY AUTOINCREMENT,
     merchant_id                 TEXT NOT NULL REFERENCES merchants(merchant_id),
-    computed_at                 TEXT NOT NULL DEFAULT (datetime('now')),
+    refresh_run_id              INTEGER NOT NULL REFERENCES refresh_runs(id),
     online_sell                 REAL,
     in_mail_buy                 REAL,
     in_store_buy                REAL,
     electronic_buy              REAL,
-    electronic_buy_sentinel     TEXT,
-    no_data                     INTEGER NOT NULL DEFAULT 0,
-    confidence                  TEXT NOT NULL,
-    ebay_sell_pct_used          REAL,
-    snapshot_config_json        TEXT NOT NULL
+    ebay_sell_pct               REAL,
+    ebay_confidence             TEXT NOT NULL CHECK (ebay_confidence IN ('high','medium','low','none')),
+    no_data                     INTEGER NOT NULL DEFAULT 0 CHECK (no_data IN (0,1)),
+    formula_breakdown_json      TEXT NOT NULL,
+    config_snapshot_json        TEXT NOT NULL,
+    computed_at                 TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_recs_merchant_date
+CREATE INDEX IF NOT EXISTS idx_price_rec_merchant_time
     ON price_recommendations(merchant_id, computed_at DESC);
 
-CREATE TABLE IF NOT EXISTS published_prices (
-    merchant_id                  TEXT PRIMARY KEY REFERENCES merchants(merchant_id),
-    online_sell                  REAL,
-    in_mail_buy                  REAL,
-    in_store_buy                 REAL,
-    electronic_buy               REAL,
-    electronic_buy_sentinel      TEXT,
-    published_at                 TEXT NOT NULL,
-    based_on_recommendation_id   INTEGER REFERENCES price_recommendations(id),
-    operator_action              TEXT NOT NULL CHECK (operator_action IN ('accept','override','skip')),
-    operator_note                TEXT
-);
-
-CREATE TABLE IF NOT EXISTS operator_actions (
-    id                          INTEGER PRIMARY KEY AUTOINCREMENT,
-    merchant_id                 TEXT NOT NULL REFERENCES merchants(merchant_id),
-    recommendation_id           INTEGER REFERENCES price_recommendations(id),
-    action                      TEXT NOT NULL CHECK (action IN ('accept','override','skip')),
-    override_online_sell        REAL,
-    override_in_mail_buy        REAL,
-    override_in_store_buy       REAL,
-    override_electronic_buy     REAL,
-    reason                      TEXT,
-    actioned_at                 TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_actions_merchant
-    ON operator_actions(merchant_id, actioned_at DESC);
-
-CREATE TABLE IF NOT EXISTS refresh_runs (
-    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
-    started_at             TEXT NOT NULL,
-    completed_at           TEXT,
-    status                 TEXT NOT NULL CHECK (status IN ('running','completed','failed','partial')),
-    merchants_processed    INTEGER,
-    merchants_with_data    INTEGER,
-    error_summary          TEXT
-);
+CREATE INDEX IF NOT EXISTS idx_price_rec_run
+    ON price_recommendations(refresh_run_id);

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-type CollectionMethod = Literal["scraper", "manual", "csv_import"]
+type CollectionMethod = Literal["scraper"]
 type CompetitorChannel = Literal["buy_mail", "buy_electronic", "sell", "marketplace_sell"]
 type Availability = Literal["available", "unavailable", "no_data"]
 type CompetitorConfidence = Literal["high", "medium", "low", "none"]
@@ -16,6 +16,8 @@ class CompetitorSource(BaseModel):
     last_successful_refresh: str | None = None
     last_attempted_refresh: str | None = None
     notes: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
 
 class CompetitorObservation(BaseModel):
@@ -28,4 +30,4 @@ class CompetitorObservation(BaseModel):
     observed_at: str
     source_url: str | None = None
     raw_payload: str | None = None
-    notes: str | None = None
+    created_at: str | None = None

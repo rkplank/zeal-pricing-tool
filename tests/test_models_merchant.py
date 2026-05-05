@@ -29,8 +29,6 @@ def test_mastercard_normal_merchant() -> None:
     assert m.electronic_buy_override is None
     assert m.notes is None
     assert m.ebay_weight == 1.0
-    assert m.risk_status == "normal"
-    assert m.risk_note is None
 
 
 def test_pattern_a_merchant_with_online_sell_override() -> None:
