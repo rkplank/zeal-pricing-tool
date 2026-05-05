@@ -204,3 +204,61 @@ Competitor data informs three of the four channels: `online_sell`, `in_mail_buy`
 **Alternatives:** (a) compute the breakdown in the dashboard template using merchant config and global constants; (b) extend the pricing engine to return a structured breakdown alongside the final price.
 
 **Rationale:** Engine-side keeps the engine as the single source of truth for pricing logic. The breakdown is part of the engine's contract, verifiable by tests, and rendered by templates that are pure presentation. Template-side breakdown computation works but introduces drift risk: any change to engine formulas would require parallel updates to templates with no automated check that they stay synchronized.
+
+---
+
+## 2026-05-04 — v1 reframed as read-only review tool, not operator action workflow
+
+**Alternatives:** (a) keep the original v1 scope with accept/override/skip workflow, risk gates, CSV export, and seven-screen dashboard; (b) collapse to a read-only review tool the operator runs on demand to view recommendations, with all pricing application happening outside the tool.
+
+**Rationale:** the operator's actual workflow is to look at recommendations, decide on prices in his head, and apply them through whatever channel he uses today. The original scope's accept/override/skip flow added a tracking surface for decisions the operator does not currently track. Removing it eliminates the need for `published_prices` and `operator_actions` tables, the config editor, the global constants editor, the admin panels, the CSV export, and the priority-grouped dashboard layout — all replaced by a single scrollable list view and a drill-down detail page. The tool becomes faster to build, faster to use, and easier to extend later when the operator's actual needs are known. v2 reintroduces decision-tracking surfaces if and when "what did I publish" becomes a question worth answering inside the tool.
+
+---
+
+## 2026-05-04 — Drop `published_prices` and `operator_actions` tables; drop `risk_status` and `risk_note` columns
+
+**Alternatives:** (a) keep the tables and columns dormant in v1 (no UI to write to them, but schema reserved); (b) drop them and reintroduce in v2 if needed.
+
+**Rationale:** dormant schema is quiet complexity — every migration, every audit, every test surface has to deal with tables that nothing reads or writes. Re-adding tables and columns when v2 needs them is cheap; carrying dead schema forward is not. The v1 use case (read-only review) does not require any of these surfaces. `risk_status` was tied to the accept-button gate that v1 doesn't have; with no edit UI to set it, the field is unsettable.
+
+---
+
+## 2026-05-04 — Refresh model: on-demand only, background task with progress polling
+
+**Alternatives:** (a) Windows Task Scheduler runs a daily refresh at 6 AM; (b) on-demand only, synchronous (button blocks until refresh completes); (c) on-demand only, background task with progress polling; (d) CLI-only refresh, web app reads what's in the database.
+
+**Rationale:** the operator runs the tool when he wants to price cards, not on a fixed cadence. Daily scheduled refresh produces stale data on the days he doesn't use the tool and competes with his actual schedule on the days he does. Synchronous in-app refresh would block the UI for 2-4 minutes, which is too long. Background task with progress polling gives the operator clear feedback while keeping the request model simple — one POST starts the task, polls show progress, the table updates when done. Eliminating Task Scheduler also removes a Windows-specific deployment dependency, simplifying setup.
+
+---
+
+## 2026-05-04 — Single competitor scraper in v1: CardCash, reference-only display
+
+**Alternatives:** (a) ship multiple competitor scrapers in v1 (CardCash + Raise, with Cardpool/GiftCardGranny in v2); (b) ship one source, with additional sources tracked as v2 work; (c) defer all competitor scraping to v2 and ship v1 with eBay only.
+
+**Rationale:** CardCash is the right first source on three criteria. Merchant-catalog overlap with Zeal's ~300 merchants is highest among the candidates (1,000+ merchants on CardCash; the Zeal subset is almost entirely covered). Data shape matches the operator's manual-workflow input — CardCash publishes a per-merchant "we'll buy at X%" rate, the same shape as the spreadsheet's competitor cells. Site stability is acceptable: server-rendered HTML, stable URL pattern, Cloudflare tractable with polite request rates. Raise is structurally noisier (marketplace pricing across denominations), Cardpool's catalog has shrunk significantly, and GiftCardGranny is an aggregator (scraping a scraper compounds fragility). Shipping one source rather than two protects against the operational risk of investing scraper-debugging time on two sources before either has been validated against operator judgment. Additional sources are tracked in `pricing_algorithm.md` §11 item 11.
+
+Competitor data is reference-only in v1 — displayed on the merchant detail page, not consumed by the engine. The algorithm stays spreadsheet-faithful. v2 introduces the `ebay_weight` slider that connects the existing competitor aggregation pipeline to the engine's blending path.
+
+---
+
+## 2026-05-04 — `price_recommendations` is the system of record; append-only, no pruning
+
+**Alternatives:** (a) overwrite the latest recommendation per merchant (one row per merchant, current-state model); (b) append-only with periodic pruning of old rows; (c) append-only with no pruning, storing all history forever.
+
+**Rationale:** the operator wants the tool to be a continuous historical reference of pricing data from the moment v1 launches. Append-only achieves this; overwriting destroys the "what did the algorithm say last week" answer. SQLite handles ~300 merchants x weekly refresh x indefinite retention without strain (~15K rows/year, well under any meaningful threshold). Pruning is easy to add later; un-pruning is impossible. No pruning in v1.
+
+---
+
+## 2026-05-04 — Future website integration is the architectural North Star
+
+**Alternatives:** (a) treat website integration as a future redesign and don't constrain v1 around it; (b) build v1 with the integration as an explicit architectural constraint, even though it's not a v1 feature.
+
+**Rationale:** the operator described website integration as a likely v2/v3 outcome if v1 proves useful. The cost of preserving feasibility now is low — the pure-function engine boundary in `pricing/` already exists and is enforced by the test suite. The cost of *not* preserving it is high: any cross-layer leak (e.g. SQLite calls in the engine, FastAPI imports in `pricing/`) would mean the website integration is a rewrite rather than a wiring exercise. The constraint is documented in `architecture.md` §1 (goal: forward-compatible) and §14 (acceptance criterion 10: import-linter rule in CI). v1 ships without any website integration code; it ships with the engine boundary defended.
+
+---
+
+## 2026-05-04 — Sort signals: delta-from-last-run (default) and max-abs-delta-over-N (secondary)
+
+**Alternatives:** (a) sort by delta-from-last-run only; (b) sort by max-abs-delta-over-N only; (c) sort by delta-from-published-price (the original scope); (d) provide both delta-from-last-run and max-abs-delta-over-N as sortable columns.
+
+**Rationale:** delta-from-last-run answers "what changed since I last refreshed" — the most common question. Max-abs-delta-over-N answers "what has been drifting steadily" — caught only by looking across multiple runs. Both are computed at query time from the `price_recommendations` table; no schema changes, no triggers. Default sort is delta-from-last-run by absolute value, descending — large movers float to the top. The secondary column is sortable on click. N defaults to 5, configurable later if 5 turns out to be wrong. Delta-from-published-price (original scope) is no longer applicable because v1 doesn't track published prices.
