@@ -178,11 +178,12 @@ tr:hover td {
 .breakdown-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .breakdown-channel {
   border: 1px solid var(--border);
+  min-width: 0;
   padding: 10px;
 }
 
@@ -193,10 +194,25 @@ tr:hover td {
 }
 
 .breakdown-channel li {
+  align-items: baseline;
   display: grid;
   gap: 6px;
-  grid-template-columns: 1fr 32px 72px;
+  grid-template-columns: minmax(0, 1fr) 24px minmax(64px, max-content);
   padding: 4px 0;
+}
+
+.breakdown-channel li span,
+.breakdown-channel li strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.breakdown-note {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 code {

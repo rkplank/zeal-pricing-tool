@@ -5,11 +5,15 @@
     <h3>{{ channel|channel }}</h3>
     <ol>
       {% for step in steps %}
+      {% if step.label is status_step %}
+      <li class="breakdown-note">{{ step.label|step_label }}</li>
+      {% else %}
       <li>
-        <span>{{ step.label }}</span>
+        <span>{{ step.label|step_label }}</span>
         <code>{{ step.sign }}</code>
         <strong>{% if step.value is number %}{{ step.value|pct }}{% else %}{{ step.value }}{% endif %}</strong>
       </li>
+      {% endif %}
       {% endfor %}
     </ol>
   </div>

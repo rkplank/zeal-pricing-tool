@@ -20,7 +20,7 @@ DEMO_CONSTANTS = GlobalConstants(
     online_sell_bonus_zen_nocomp=0.085,
     in_store_bad_debt=0.048,
     in_mail_bad_debt=0.02,
-    online_bad_debt=0.0,
+    online_bad_debt=0.05,
 )
 
 

@@ -35,3 +35,14 @@ def test_seed_demo_accepts_explicit_fixture_path(tmp_path: Path) -> None:
     seed_demo_data(conn, fixture_copy)
 
     assert conn.execute("SELECT COUNT(*) FROM global_constants").fetchone()[0] > 0
+
+
+def test_seed_demo_online_bad_debt_matches_spec_baseline() -> None:
+    conn = _conn()
+    seed_demo_data(conn, BASELINE_FIXTURE)
+
+    value = conn.execute(
+        "SELECT value FROM global_constants WHERE key = 'online_bad_debt'"
+    ).fetchone()[0]
+
+    assert value == 0.05
