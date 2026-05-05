@@ -1,0 +1,28 @@
+{% if merchant.competitor_observations %}
+<table class="detail-table">
+  <thead>
+    <tr>
+      <th>Source</th>
+      <th>Channel</th>
+      <th>Price</th>
+      <th>Availability</th>
+      <th>Confidence</th>
+      <th>Observed</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for obs in merchant.competitor_observations %}
+    <tr>
+      <td>{{ obs.source_name }}</td>
+      <td>{{ obs.channel }}</td>
+      <td>{{ obs.price_pct|pct }}</td>
+      <td>{{ obs.availability }}</td>
+      <td>{{ obs.confidence }}</td>
+      <td>{{ obs.observed_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No CardCash data yet. Competitor data is reference-only in v1.</p>
+{% endif %}

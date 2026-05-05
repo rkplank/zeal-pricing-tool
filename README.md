@@ -19,10 +19,12 @@ The current codebase proves that the March 2022 spreadsheet logic ports
 faithfully. The engine matches the spreadsheet baseline within +/-0.001 across
 all 281 baseline merchants.
 
-Phase 2 begins after eBay Browse API access is approved. The four phases ahead
--- read-only viewer with synthetic data (Phase 2), on-demand eBay refresh
-(Phase 3), CardCash competitor scraper (Phase 4), polish and stabilize
-(Phase 5) -- are scoped in `docs/architecture.md` §11.
+Phase 2 can run now with synthetic recommendation data from the golden
+spreadsheet baseline. eBay Browse API access is the main prerequisite for Phase
+3 on-demand live refresh. The four phases ahead -- read-only viewer with
+synthetic data (Phase 2), on-demand eBay refresh (Phase 3), CardCash competitor
+scraper (Phase 4), polish and stabilize (Phase 5) -- are scoped in
+`docs/architecture.md` §11.
 
 Do not assume live eBay collection, CardCash scraping, refresh job, deployment
 scripts, or dashboard UI are present yet.

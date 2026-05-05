@@ -1,0 +1,20 @@
+{% if merchant.latest and merchant.latest.formula_breakdown %}
+<div class="breakdown-grid">
+  {% for channel, steps in merchant.latest.formula_breakdown.items() %}
+  <div class="breakdown-channel">
+    <h3>{{ channel|channel }}</h3>
+    <ol>
+      {% for step in steps %}
+      <li>
+        <span>{{ step.label }}</span>
+        <code>{{ step.sign }}</code>
+        <strong>{% if step.value is number %}{{ step.value|pct }}{% else %}{{ step.value }}{% endif %}</strong>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty">No formula breakdown available.</p>
+{% endif %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section-head">
+  <div>
+    <h1>Pricing List</h1>
+    <p>{{ rows|length }} active merchants</p>
+  </div>
+</section>
+
+<div class="table-wrap">
+  <table class="pricing-table">
+    <thead>
+      <tr>
+        <th>Merchant</th>
+        <th>Tier</th>
+        <th>eBay sell</th>
+        <th>Online sell</th>
+        <th>In-mail buy</th>
+        <th>In-store buy</th>
+        <th>Electronic buy</th>
+        <th>Delta last run</th>
+        <th>Max abs delta N=5</th>
+        <th>eBay confidence</th>
+        <th>Last refresh</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
+        <td>{{ row.tier }}</td>
+        {% if row.latest %}
+        <td>{{ row.latest.ebay_sell_pct|pct }}</td>
+        <td>{{ row.latest.online_sell|pct }}</td>
+        <td>{{ row.latest.in_mail_buy|pct }}</td>
+        <td>{{ row.latest.in_store_buy|pct }}</td>
+        <td>{{ row.latest.electronic_buy|pct }}</td>
+        <td>
+          {{ row.delta_last_run|pp }}
+          {% if row.delta_last_run_channel %}<span>{{ row.delta_last_run_channel|channel }}</span>{% endif %}
+        </td>
+        <td>
+          {{ row.max_abs_delta_over_n|pp }}
+          {% if row.max_abs_delta_channel %}<span>{{ row.max_abs_delta_channel|channel }}</span>{% endif %}
+        </td>
+        <td><span class="badge">{{ row.latest.ebay_confidence }}</span></td>
+        <td>{{ row.latest.computed_at }}</td>
+        {% else %}
+        <td colspan="9" class="empty">No recommendation seeded yet</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

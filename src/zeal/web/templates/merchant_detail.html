@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav class="crumb"><a href="/">Pricing List</a> / {{ merchant.display_name }}</nav>
+
+<section class="section-head">
+  <div>
+    <h1>{{ merchant.display_name }}</h1>
+    <p>{{ merchant.tier }} tier</p>
+  </div>
+</section>
+
+{% if merchant.latest %}
+<section class="metric-grid">
+  <div><span>Online sell</span><strong>{{ merchant.latest.online_sell|pct }}</strong></div>
+  <div><span>In-mail buy</span><strong>{{ merchant.latest.in_mail_buy|pct }}</strong></div>
+  <div><span>In-store buy</span><strong>{{ merchant.latest.in_store_buy|pct }}</strong></div>
+  <div><span>Electronic buy</span><strong>{{ merchant.latest.electronic_buy|pct }}</strong></div>
+  <div><span>eBay sell</span><strong>{{ merchant.latest.ebay_sell_pct|pct }}</strong></div>
+  <div><span>Confidence</span><strong>{{ merchant.latest.ebay_confidence }}</strong></div>
+</section>
+
+<section class="panel">
+  <h2>Formula Breakdown</h2>
+  {% include "partials/breakdown.html" %}
+</section>
+{% else %}
+<section class="panel empty">No recommendation seeded yet.</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Recent eBay Observations</h2>
+  {% if merchant.recent_ebay_observations %}
+  <table class="detail-table">
+    <thead><tr><th>Sold</th><th>Title</th><th>Face</th><th>Sale</th><th>Sell %</th></tr></thead>
+    <tbody>
+      {% for obs in merchant.recent_ebay_observations %}
+      <tr>
+        <td>{{ obs.sold_at }}</td>
+        <td>{{ obs.title }}</td>
+        <td>{{ obs.face_value }}</td>
+        <td>{{ obs.sale_price }}</td>
+        <td>{{ obs.sell_pct|pct }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No eBay observations yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Excluded eBay Observations</h2>
+  {% if merchant.excluded_ebay_observations %}
+  <table class="detail-table">
+    <thead><tr><th>Sold</th><th>Title</th><th>Sell %</th><th>Reason</th></tr></thead>
+    <tbody>
+      {% for obs in merchant.excluded_ebay_observations %}
+      <tr>
+        <td>{{ obs.sold_at }}</td>
+        <td>{{ obs.title }}</td>
+        <td>{{ obs.sell_pct|pct }}</td>
+        <td>{{ obs.exclusion_reason or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No excluded observations yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Competitor Reference</h2>
+  {% include "partials/competitor_panel.html" %}
+</section>
+
+<section class="panel">
+  <h2>Recommendation History</h2>
+  {% if merchant.history %}
+  <table class="detail-table">
+    <thead>
+      <tr>
+        <th>Computed</th>
+        <th>Online sell</th>
+        <th>In-mail buy</th>
+        <th>In-store buy</th>
+        <th>Electronic buy</th>
+        <th>Confidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rec in merchant.history %}
+      <tr>
+        <td>{{ rec.computed_at }}</td>
+        <td>{{ rec.online_sell|pct }}</td>
+        <td>{{ rec.in_mail_buy|pct }}</td>
+        <td>{{ rec.in_store_buy|pct }}</td>
+        <td>{{ rec.electronic_buy|pct }}</td>
+        <td>{{ rec.ebay_confidence }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No recommendation history yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Recent Refresh Status</h2>
+  {% if merchant.recent_refreshes %}
+  <table class="detail-table">
+    <thead><tr><th>Run</th><th>Status</th><th>Started</th><th>Completed</th><th>Recommendation</th></tr></thead>
+    <tbody>
+      {% for run in merchant.recent_refreshes %}
+      <tr>
+        <td>{{ run.refresh_run_id }}</td>
+        <td>{{ run.status }}</td>
+        <td>{{ run.started_at }}</td>
+        <td>{{ run.completed_at or "—" }}</td>
+        <td>{% if run.has_recommendation %}present{% else %}not present{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No refresh runs yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
