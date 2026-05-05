@@ -262,3 +262,19 @@ Competitor data is reference-only in v1 — displayed on the merchant detail pag
 **Alternatives:** (a) sort by delta-from-last-run only; (b) sort by max-abs-delta-over-N only; (c) sort by delta-from-published-price (the original scope); (d) provide both delta-from-last-run and max-abs-delta-over-N as sortable columns.
 
 **Rationale:** delta-from-last-run answers "what changed since I last refreshed" — the most common question. Max-abs-delta-over-N answers "what has been drifting steadily" — caught only by looking across multiple runs. Both are computed at query time from the `price_recommendations` table; no schema changes, no triggers. Default sort is delta-from-last-run by absolute value, descending — large movers float to the top. The secondary column is sortable on click. N defaults to 5, configurable later if 5 turns out to be wrong. Delta-from-published-price (original scope) is no longer applicable because v1 doesn't track published prices.
+
+---
+
+## 2026-05-05 — eBay sold-listings access requires Marketplace Insights API, not Browse API
+
+**Issue:** The spec and architecture docs originally referenced "eBay Browse API, sold listings filter" as the data source for the eBay sell %. This is incorrect. The Browse API returns active listings only; it has no sold-listings filter. Sold (completed) listing data on eBay's modern API surface requires the Marketplace Insights API, which is a separate, gated program beyond the general eBay developer program. Access requires a distinct business-case application.
+
+**Application status:** The general eBay developer program application has been submitted. A response has not yet arrived. The specific API tier that will be granted — and in particular whether Marketplace Insights access will be approved — is pending. No code should be written against the live eBay API until the tier is confirmed.
+
+**Fallback contingencies:** If Marketplace Insights is denied, the available fallbacks are poor. The Finding API's `findCompletedItems` call historically exposed sold-listing data but is being retired by eBay. The Trading API's `GetSellerTransactions` exposes only a seller's own transaction data, not the market. Both contingencies are v2-class problems: they require reassessing the core data source and potentially the algorithm's eBay sell % input. Scraping eBay's sold-listings pages is the last resort and was explicitly ruled out as too risky given eBay's scraper defenses (see the 2026-05-01 "eBay Browse API, not scraping eBay" entry — the same reasoning applies here with even more force on completed-listing pages).
+
+**v1 build plan unchanged:** v1 proceeds against the `EbayClient` protocol seam with `SyntheticEbayClient` providing the synthetic data needed for Phase 2 dashboard rendering. Phase 3 (live eBay refresh) is gated on API access confirmation. The build sequence is unaffected because Phase 2 does not require live ingestion.
+
+**Alternatives:** (a) block all eBay-related development until access is confirmed — rejected because Phase 1 and Phase 2 work is API-independent; (b) proceed assuming Browse API works — rejected because it demonstrably does not expose sold-listing data; (c) proceed as above.
+
+**Rationale:** documenting this now prevents the Phase 3 build from starting under incorrect assumptions about which API to integrate against. Marketplace Insights is the correct target; Browse is the wrong target.

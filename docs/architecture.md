@@ -179,7 +179,7 @@ Four components, with explicit dependencies:
 
 1. **Pricing Engine** — pure functions, no I/O. Reads merchant config, eBay observations, and competitor aggregates from arguments; returns `PriceRecommendation` objects with per-channel breakdowns. The formulas from spec §5 live here. The engine's input contract includes `ebay_weight` and a `CompetitorAggregate`; in v1 these are passed but `ebay_weight = 1.0` so the recommendation equals the eBay-only path output. Heavily tested. **Forward-compatibility note:** because this layer has no FastAPI or SQLite imports, a future website integration can import `compute_prices` directly without dragging the dashboard infrastructure with it.
 
-2. **Ingestion** — eBay client (Browse API wrapper) and competitor scraper (CardCash). Both are invoked from the background refresh task. The eBay client paginates, filters listings per spec §6.2, and writes to `ebay_observations` with `validity_status` and `exclusion_reason`. The CardCash scraper writes to `competitor_observations`. Both are idempotent and safe to re-run.
+2. **Ingestion** — eBay client (Marketplace Insights API wrapper) and competitor scraper (CardCash). Both are invoked from the background refresh task. The eBay client paginates, filters listings per spec §6.2, and writes to `ebay_observations` with `validity_status` and `exclusion_reason`. The CardCash scraper writes to `competitor_observations`. Both are idempotent and safe to re-run.
 
 3. **Dashboard (FastAPI)** — the operator UI plus refresh orchestration. Two screens (list view, merchant detail) plus three control routes (`POST /refresh`, `GET /refresh/status`, `GET /merchant/{id}`). The refresh task runs as a FastAPI background task in the same process; status is tracked in the `refresh_runs` table and exposed via the status endpoint.
 
@@ -196,7 +196,7 @@ Refresh is on-demand only. There is no scheduled job in v1.
 1. Browser issues `POST /refresh`. Server checks `refresh_runs` for an in-flight run; if one exists, returns 409. Otherwise creates a row in `refresh_runs` with status `running` and dispatches a FastAPI background task.
 2. Browser begins polling `GET /refresh/status` every 2 seconds. The status response is `{state, processed, total, started_at, error?}`.
 3. The background task iterates active merchants:
-   - For each merchant: query eBay Browse API for sold listings matching the merchant's regex, last 90 days, US only.
+   - For each merchant: query eBay Marketplace Insights API for sold listings matching the merchant's regex, last 90 days, US only.
    - For each listing: apply validity filters (spec §6.2), upsert into `ebay_observations` (deduped by `listing_id`), recording `validity_status` and `exclusion_reason`.
    - Compute `ebay_sell_pct` per spec §6.3, eBay confidence per spec §6.4. Upsert one row in `ebay_summary` keyed by `(merchant_id, today)`.
    - Compute the recommendation by calling `compute_prices(ebay_sell_pct, ebay_confidence, competitor=None_or_aggregate, config, constants)`. v1 always passes `ebay_weight = 1.0` (read from merchant config) and the recommendation equals the eBay-only output. Insert into `price_recommendations`.
@@ -205,7 +205,7 @@ Refresh is on-demand only. There is no scheduled job in v1.
 5. When all merchants are processed (or an unrecoverable error occurs): mark `refresh_runs` row `completed` (or `failed`/`partial`), set `completed_at`. The status endpoint surfaces this and the browser stops polling.
 6. The dashboard re-renders the list view to show the new recommendations.
 
-**Rate limiting:** eBay Browse API allows 5,000 calls/day on free tier. ~300 merchants x ~3 paginated requests each is ~900 calls per refresh. A 100ms sleep between calls keeps us comfortably polite. CardCash adds 500-1000ms between requests because the operator may run multiple refreshes per day and the per-day total should still stay low.
+**Rate limiting:** ~300 merchants x ~3 paginated requests each is ~900 calls per refresh. The per-day call budget depends on the API tier granted by eBay; this is pending approval (see §12 Q1). Until confirmed limits are known, a conservative 100ms sleep between calls will be used as a starting point and adjusted once the tier is established. CardCash adds 500-1000ms between requests because the operator may run multiple refreshes per day and the per-day total should still stay low.
 
 **Failure handling:** on per-merchant failure, log and skip. The merchant's most recent prior recommendation remains the latest known. The list view marks merchants whose latest recommendation is from a prior refresh — not a hard error, just a freshness indicator.
 
@@ -600,7 +600,7 @@ Goal: the dashboard structure exists and renders, before any live ingestion is w
 
 Goal: real eBay data, real refresh button, real progress bar.
 
-- eBay Browse API client (Phase 2 prerequisite: API access approved)
+- eBay Marketplace Insights API client (prerequisite: API access approved)
 - Listing filter (extended validity rules per spec §6.2)
 - Refresh orchestrator running as FastAPI background task
 - `POST /refresh`, `GET /refresh/status` routes
@@ -632,7 +632,7 @@ After Phase 5: stabilize. v2 (per `pricing_algorithm.md` §11) starts only after
 
 Tracked here so the build does not get blocked on missing answers, but listed so we can resolve them as we go:
 
-- **Q1.** eBay API approval status. Pending, will update.
+- **Q1.** eBay API access status. The general eBay developer program application has been submitted; a response is pending. The specific API tier that will be granted has not yet been confirmed. Sold-listing data requires the **Marketplace Insights API**, which is a separately gated program beyond Browse API access — Browse returns active listings only and is not suitable for the eBay sell % computation. Phase 3 (live eBay refresh) is blocked until Marketplace Insights access is approved. See decisions_log.md 2026-05-05 for fallback contingencies if access is denied.
 - **Q2.** ~~Display: percentages or dollar amounts?~~ **Resolved:** operator confirmed percentages. See decisions_log.md 2026-05-03.
 - **Q3.** Currency formatting (78.5% vs 0.785 vs $78.50/$100). Use percentages with one decimal place, matching the spreadsheet's convention.
 - **Q4.** When the operator updates `online_sell_override` for a Pattern A merchant, should the on-demand refresh skip eBay ingestion entirely for that merchant? Default: yes — no eBay calls for merchants with the override set. Saves rate-limit budget and avoids generating misleading "No Data" warnings.
