@@ -1,0 +1,519 @@
+{
+  "GiftCardPricingData_2017.xls": [
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "GadgetGift_Plan",
+      "used_range": {
+        "display": "R1C1:R297C32",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 31,
+        "last_row": 296
+      }
+    },
+    {
+      "data_row_count": 262,
+      "detected_columns": {
+        "ebay_sell": 2,
+        "electronic_buy": 4,
+        "in_mail_buy": 3,
+        "in_store_buy": 5,
+        "merchant_name": 1,
+        "online_sell": 6,
+        "tier": 7
+      },
+      "header_row": 2,
+      "likely_pricing_sheet": true,
+      "name": "PricingSheet",
+      "used_range": {
+        "display": "R1C1:R297C8",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 7,
+        "last_row": 296
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "InputsandMargins",
+      "used_range": {
+        "display": "R1C1:R41C3",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 2,
+        "last_row": 40
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "merchant_name": 2
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "TopCards",
+      "used_range": {
+        "display": "R2C1:R41C6",
+        "first_col": 0,
+        "first_row": 1,
+        "last_col": 5,
+        "last_row": 40
+      }
+    }
+  ],
+  "GiftCardPricingData_2018.xls": [
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "GadgetGift_Plan",
+      "used_range": {
+        "display": "R1C1:R297C19",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 18,
+        "last_row": 296
+      }
+    },
+    {
+      "data_row_count": 264,
+      "detected_columns": {
+        "ebay_sell": 2,
+        "electronic_buy": 4,
+        "in_mail_buy": 3,
+        "in_store_buy": 5,
+        "merchant_name": 1,
+        "online_sell": 6,
+        "tier": 7
+      },
+      "header_row": 2,
+      "likely_pricing_sheet": true,
+      "name": "PricingSheet",
+      "used_range": {
+        "display": "R1C1:R749C7",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 6,
+        "last_row": 748
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "cardcash_buy": 3,
+        "in_mail_buy": 6,
+        "merchant_name": 1
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "CardPoolCash",
+      "used_range": {
+        "display": "R3C1:R295C6",
+        "first_col": 0,
+        "first_row": 2,
+        "last_col": 5,
+        "last_row": 294
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "InputsandMargins",
+      "used_range": {
+        "display": "R1C1:R39C3",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 2,
+        "last_row": 38
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "merchant_name": 2
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "TopCards",
+      "used_range": {
+        "display": "R2C1:R47C7",
+        "first_col": 0,
+        "first_row": 1,
+        "last_col": 6,
+        "last_row": 46
+      }
+    }
+  ],
+  "GiftCardPricingData_2021.xls": [
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "GadgetGift_Plan",
+      "used_range": {
+        "display": "R1C1:R296C5",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 4,
+        "last_row": 295
+      }
+    },
+    {
+      "data_row_count": 286,
+      "detected_columns": {
+        "ebay_sell": 2,
+        "electronic_buy": 4,
+        "in_mail_buy": 3,
+        "in_store_buy": 5,
+        "merchant_name": 1,
+        "online_sell": 6,
+        "tier": 7
+      },
+      "header_row": 2,
+      "likely_pricing_sheet": true,
+      "name": "PricingSheet",
+      "used_range": {
+        "display": "R1C1:R749C7",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 6,
+        "last_row": 748
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "InputsandMargins",
+      "used_range": {
+        "display": "R1C1:R39C3",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 2,
+        "last_row": 38
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "merchant_name": 2
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "TopCards",
+      "used_range": {
+        "display": "R2C1:R47C7",
+        "first_col": 0,
+        "first_row": 1,
+        "last_col": 6,
+        "last_row": 46
+      }
+    }
+  ],
+  "GiftCardPricingData_2022.xls": [
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "GadgetGift_Plan",
+      "used_range": {
+        "display": "R1C1:R296C5",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 4,
+        "last_row": 295
+      }
+    },
+    {
+      "data_row_count": 286,
+      "detected_columns": {
+        "ebay_sell": 2,
+        "electronic_buy": 4,
+        "in_mail_buy": 3,
+        "in_store_buy": 5,
+        "merchant_name": 1,
+        "online_sell": 6,
+        "tier": 7
+      },
+      "header_row": 2,
+      "likely_pricing_sheet": true,
+      "name": "PricingSheet",
+      "used_range": {
+        "display": "R1C1:R749C10",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 9,
+        "last_row": 748
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "InputsandMargins",
+      "used_range": {
+        "display": "R1C1:R39C3",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 2,
+        "last_row": 38
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "merchant_name": 2
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "TopCards",
+      "used_range": {
+        "display": "R2C1:R47C7",
+        "first_col": 0,
+        "first_row": 1,
+        "last_col": 6,
+        "last_row": 46
+      }
+    }
+  ],
+  "GiftCardPricingData_2023.xls": [
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "GadgetGift_Plan",
+      "used_range": {
+        "display": "R1C1:R296C5",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 4,
+        "last_row": 295
+      }
+    },
+    {
+      "data_row_count": 288,
+      "detected_columns": {
+        "ebay_sell": 2,
+        "electronic_buy": 4,
+        "in_mail_buy": 3,
+        "in_store_buy": 5,
+        "merchant_name": 1,
+        "online_sell": 6,
+        "tier": 7
+      },
+      "header_row": 2,
+      "likely_pricing_sheet": true,
+      "name": "PricingSheet",
+      "used_range": {
+        "display": "R1C1:R751C9",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 8,
+        "last_row": 750
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "InputsandMargins",
+      "used_range": {
+        "display": "R1C1:R39C3",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 2,
+        "last_row": 38
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "merchant_name": 2
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "TopCards",
+      "used_range": {
+        "display": "R2C1:R47C7",
+        "first_col": 0,
+        "first_row": 1,
+        "last_col": 6,
+        "last_row": 46
+      }
+    }
+  ],
+  "GiftCardPricingData_2025.xls": [
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "GadgetGift_Plan",
+      "used_range": {
+        "display": "R1C1:R296C5",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 4,
+        "last_row": 295
+      }
+    },
+    {
+      "data_row_count": 289,
+      "detected_columns": {
+        "cardcash_buy": 9,
+        "cardcash_sell": 8,
+        "ebay_sell": 2,
+        "electronic_buy": 4,
+        "in_mail_buy": 3,
+        "in_store_buy": 5,
+        "merchant_name": 1,
+        "online_sell": 6,
+        "tier": 7
+      },
+      "header_row": 2,
+      "likely_pricing_sheet": true,
+      "name": "PricingSheet",
+      "used_range": {
+        "display": "R1C1:R752C9",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 8,
+        "last_row": 751
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "InputsandMargins",
+      "used_range": {
+        "display": "R1C1:R39C3",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 2,
+        "last_row": 38
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "merchant_name": 2
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "TopCards",
+      "used_range": {
+        "display": "R2C1:R47C7",
+        "first_col": 0,
+        "first_row": 1,
+        "last_col": 6,
+        "last_row": 46
+      }
+    }
+  ],
+  "GiftCardPricingData_2025.xlsx": [
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "GadgetGift_Plan",
+      "used_range": {
+        "display": "R1C1:R296C5",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 4,
+        "last_row": 295
+      }
+    },
+    {
+      "data_row_count": 289,
+      "detected_columns": {
+        "cardcash_buy": 9,
+        "cardcash_sell": 8,
+        "ebay_sell": 2,
+        "electronic_buy": 4,
+        "in_mail_buy": 3,
+        "in_store_buy": 5,
+        "merchant_name": 1,
+        "online_sell": 6,
+        "tier": 7
+      },
+      "header_row": 2,
+      "likely_pricing_sheet": true,
+      "name": "PricingSheet",
+      "used_range": {
+        "display": "R1C1:R752C9",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 8,
+        "last_row": 751
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {},
+      "header_row": null,
+      "likely_pricing_sheet": false,
+      "name": "InputsandMargins",
+      "used_range": {
+        "display": "R1C1:R39C3",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 2,
+        "last_row": 38
+      }
+    },
+    {
+      "data_row_count": 0,
+      "detected_columns": {
+        "merchant_name": 2
+      },
+      "header_row": 3,
+      "likely_pricing_sheet": false,
+      "name": "TopCards",
+      "used_range": {
+        "display": "R2C1:R47C7",
+        "first_col": 0,
+        "first_row": 1,
+        "last_col": 6,
+        "last_row": 46
+      }
+    },
+    {
+      "data_row_count": 289,
+      "detected_columns": {
+        "in_mail_buy": 5,
+        "in_store_buy": 4,
+        "merchant_name": 1,
+        "tier": 3
+      },
+      "header_row": 1,
+      "likely_pricing_sheet": false,
+      "name": "MarginRefs",
+      "used_range": {
+        "display": "R1C1:R296C7",
+        "first_col": 0,
+        "first_row": 0,
+        "last_col": 6,
+        "last_row": 295
+      }
+    }
+  ]
+}
