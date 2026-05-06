@@ -19,15 +19,22 @@ The current codebase proves that the March 2022 spreadsheet logic ports
 faithfully. The engine matches the spreadsheet baseline within +/-0.001 across
 all 281 baseline merchants.
 
-Phase 2 can run now with synthetic recommendation data from the golden
-spreadsheet baseline. eBay Browse API access is the main prerequisite for Phase
-3 on-demand live refresh. The four phases ahead -- read-only viewer with
-synthetic data (Phase 2), on-demand eBay refresh (Phase 3), CardCash competitor
-scraper (Phase 4), polish and stabilize (Phase 5) -- are scoped in
-`docs/architecture.md` §11.
+The dashboard now supports read-only review and on-demand refresh. It remains
+synthetic-by-default for local development, and can use the live eBay
+Marketplace Insights API once credentials are configured.
 
-Do not assume live eBay collection, CardCash scraping, refresh job, deployment
-scripts, or dashboard UI are present yet.
+CardCash competitor data remains reference-only/post-feedback. Do not assume
+automated publishing, scheduled refresh, operator workflow, or deployment
+scripts are present.
+
+## Credential-Day Procedure
+
+1. Wait for eBay developer-program approval; confirm access is Marketplace Insights, not Browse-only.
+2. Copy `.env.example` to `.env`; fill `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`; set `ZEAL_EBAY_MODE=live`; confirm `EBAY_ENVIRONMENT`.
+3. Run `uv run python -m zeal.cli smoke-ebay --merchant home_depot` or another known merchant.
+4. Verify listing titles match the merchant, sale prices are non-zero, sold dates are recent, and post-filter valid count is non-zero.
+5. If the smoke test passes, restart the dashboard, click "Refresh now," watch progress, and spot-check 3-5 merchant detail pages.
+6. If the smoke test fails: `EbayAuthError` means credentials; `EbayRateLimitError` means pacing/quota; `EbayServerError`/`EbayNetworkError` means transient; otherwise inspect the stack trace.
 
 ## Scope
 
@@ -67,9 +74,9 @@ zeal-pricing-tool/
 |   |-- db/                SQLite connection and schema
 |   |-- models/            Pydantic data models
 |   |-- pricing/           pure pricing, blending, filters, aggregation helpers
-|   |-- ingestion/         placeholder package for future ingestion work
+|   |-- ingestion/         eBay clients and refresh orchestration
 |   |-- jobs/              placeholder; v1 has no scheduled jobs
-|   `-- web/               FastAPI dashboard list/detail and on-demand refresh routes; partial in Phase 2
+|   `-- web/               FastAPI dashboard list/detail and on-demand refresh routes
 |-- tests/                 unit tests and golden baseline test
 `-- data/                  local runtime data location
 ```
@@ -79,9 +86,9 @@ zeal-pricing-tool/
 Install dependencies with the project environment manager, then run:
 
 ```powershell
-ruff check .
-pytest
-mypy src
+uv run ruff check .
+uv run pytest
+uv run mypy src
 ```
 
 The golden baseline fixture is stored at

@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from zeal.db.connection import apply_schema, get_connection
 from zeal.db.seed import BASELINE_FIXTURE, seed_demo_data
+from zeal.ingestion.ebay_client import SyntheticEbayClient
 from zeal.web.app import create_app
 
 
@@ -45,3 +46,37 @@ def test_missing_merchant_returns_404(tmp_path: Path) -> None:
     response = client.get("/merchant/not_real")
 
     assert response.status_code == 404
+
+
+def test_lifespan_synthetic_mode_creates_shared_client(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("ZEAL_EBAY_MODE", raising=False)
+    monkeypatch.delenv("EBAY_CLIENT_ID", raising=False)
+    monkeypatch.delenv("EBAY_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("EBAY_ENVIRONMENT", raising=False)
+    app = create_app(_seeded_db(tmp_path))
+
+    with TestClient(app):
+        ebay_client = app.state.ebay_client_factory()
+        assert isinstance(ebay_client, SyntheticEbayClient)
+        assert app.state.ebay_client_factory() is ebay_client
+
+    assert app.state.http_client.is_closed is True
+
+
+def test_lifespan_preserves_existing_ebay_client_factory_override(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    sentinel = SyntheticEbayClient()
+    monkeypatch.delenv("ZEAL_EBAY_MODE", raising=False)
+    monkeypatch.delenv("EBAY_CLIENT_ID", raising=False)
+    monkeypatch.delenv("EBAY_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("EBAY_ENVIRONMENT", raising=False)
+    app = create_app(_seeded_db(tmp_path))
+    app.state.ebay_client_factory = lambda: sentinel
+
+    with TestClient(app):
+        assert app.state.ebay_client_factory() is sentinel
