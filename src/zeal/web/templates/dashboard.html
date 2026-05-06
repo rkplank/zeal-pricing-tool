@@ -5,11 +5,21 @@
   <div>
     <h1>Pricing List</h1>
     <p>{{ rows|length }} active merchants</p>
-    <p>Seeded spreadsheet-baseline recommendations. Live eBay refresh begins in Phase 3.</p>
+  </div>
+  <div id="refresh-region"
+       hx-get="/refresh/status"
+       hx-trigger="load"
+       hx-swap="innerHTML">
   </div>
 </section>
 
-<div class="table-wrap">
+<div id="pricing-list"
+     class="table-wrap"
+     hx-get="/"
+     hx-select="#pricing-list"
+     hx-target="#pricing-list"
+     hx-swap="outerHTML"
+     hx-trigger="refreshList from:body">
   <table class="pricing-table">
     <thead>
       <tr>
@@ -56,3 +66,4 @@
   </table>
 </div>
 {% endblock %}
+

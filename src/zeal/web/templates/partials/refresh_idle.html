@@ -1,0 +1,12 @@
+<div class="refresh-idle">
+  <button
+    class="btn-refresh"
+    hx-post="/refresh"
+    hx-target="#refresh-region"
+    hx-swap="innerHTML"
+  >Refresh now</button>
+  <span class="refresh-last">
+    Last completed:
+    {% if last_completed %}{{ last_completed }}{% else %}never{% endif %}
+  </span>
+</div>

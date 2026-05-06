@@ -1,0 +1,20 @@
+<div
+  class="refresh-running"
+  hx-get="/refresh/status"
+  hx-trigger="every 2s"
+  hx-target="#refresh-region"
+  hx-swap="innerHTML"
+>
+  {% if total > 0 %}
+  <div class="progress-bar">
+    <div class="progress-fill" style="width: {{ (processed / total * 100)|int }}%"></div>
+  </div>
+  <span class="progress-label">{{ processed }} / {{ total }}</span>
+  {% else %}
+  <div class="progress-bar indeterminate"></div>
+  <span class="progress-label">Starting&hellip;</span>
+  {% endif %}
+  {% if started_at %}
+  <span class="elapsed">Started: {{ started_at }}</span>
+  {% endif %}
+</div>
