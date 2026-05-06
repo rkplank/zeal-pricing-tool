@@ -1,6 +1,6 @@
 # Historical Pricing Workbook Analysis
 
-Generated: 2026-05-06T23:40:43Z
+Generated: 2026-05-06T23:49:46Z
 
 This is read-only reconnaissance. The extracted JSON artifacts live under `docs/generated/` and are not production database tables.
 
