@@ -54,6 +54,25 @@ a:hover {
   padding: 18px 20px 32px;
 }
 
+.mode-badge {
+  background: #f3f7fb;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: #344357;
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: auto;
+  padding: 4px 8px;
+}
+
+.mode-banner {
+  background: #fff8e6;
+  border: 1px solid #eed48b;
+  color: #624a08;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+}
+
 .section-head {
   align-items: end;
   display: flex;
@@ -103,6 +122,7 @@ th {
   text-align: left;
   top: 0;
   white-space: nowrap;
+  z-index: 1;
 }
 
 td,
@@ -123,6 +143,20 @@ tr:hover td {
 
 .pricing-table {
   min-width: 1180px;
+}
+
+.pricing-table thead tr:first-child th {
+  top: 0;
+}
+
+.pricing-table thead tr:nth-child(2) th {
+  top: 27px;
+}
+
+.delta-note {
+  color: var(--muted);
+  font-weight: 400;
+  text-align: center;
 }
 
 .badge {

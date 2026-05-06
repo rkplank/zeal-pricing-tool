@@ -21,5 +21,18 @@ def merchant_detail(request: Request, merchant_id: str) -> object:
     return templates.TemplateResponse(
         request,
         "merchant_detail.html",
-        {"merchant": bundle, "title": bundle.display_name},
+        {
+            "merchant": bundle,
+            "title": bundle.display_name,
+            **_mode_context(request),
+        },
     )
+
+
+def _mode_context(request: Request) -> dict[str, object]:
+    config = request.app.state.zeal_config
+    is_synthetic = config.ebay_mode == "synthetic"
+    return {
+        "ebay_mode_label": "Synthetic" if is_synthetic else "Live eBay",
+        "is_synthetic_mode": is_synthetic,
+    }

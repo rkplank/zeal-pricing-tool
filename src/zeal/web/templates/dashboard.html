@@ -13,6 +13,12 @@
   </div>
 </section>
 
+{% if is_synthetic_mode %}
+<div class="mode-banner">
+  Viewing seeded baseline recommendations. Live eBay data is not connected yet.
+</div>
+{% endif %}
+
 <div id="pricing-list"
      class="table-wrap"
      hx-get="/"
@@ -22,6 +28,11 @@
      hx-trigger="refreshList from:body">
   <table class="pricing-table">
     <thead>
+      <tr>
+        <th colspan="7"></th>
+        <th colspan="2" class="delta-note">Delta columns populate after two or more refreshes.</th>
+        <th colspan="2"></th>
+      </tr>
       <tr>
         <th>Merchant</th>
         <th>Tier</th>
@@ -66,4 +77,3 @@
   </table>
 </div>
 {% endblock %}
-

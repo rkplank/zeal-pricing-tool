@@ -31,6 +31,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     finally:
         conn.close()
     config = ZealConfig.from_env()
+    app.state.zeal_config = config
     app.state.http_client = httpx.AsyncClient()
     ebay_client = create_ebay_client(config=config, http_client=app.state.http_client)
     if app.state.ebay_client_factory is app.state.default_ebay_client_factory:
@@ -46,6 +47,13 @@ def create_app(db_path: Path = DEFAULT_DB_PATH) -> FastAPI:
     app.state.db_path = db_path
     app.state.refresh_task = None
     app.state.refresh_lock = asyncio.Lock()
+    app.state.zeal_config = ZealConfig(
+        ebay_mode="synthetic",
+        ebay_client_id=None,
+        ebay_client_secret=None,
+        ebay_environment="production",
+        db_path=db_path,
+    )
     app.state.default_ebay_client_factory = lambda: SyntheticEbayClient()
     app.state.ebay_client_factory = app.state.default_ebay_client_factory
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")

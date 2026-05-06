@@ -26,6 +26,11 @@ def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert "Pricing List" in response.text
     assert "Home Depot" in response.text
+    assert "Mode: Synthetic" in response.text
+    assert "Viewing seeded baseline recommendations. Live eBay data is not connected yet." in (
+        response.text
+    )
+    assert "Delta columns populate after two or more refreshes." in response.text
 
 
 def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
@@ -37,6 +42,11 @@ def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert "Formula Breakdown" in response.text
     assert "No CardCash data yet" in response.text
+    assert "Mode: Synthetic" in response.text
+    assert (
+        "No live eBay observations yet. Current recommendations are seeded from the "
+        "spreadsheet baseline. Live observations will appear after a successful eBay refresh."
+    ) in response.text
 
 
 def test_missing_merchant_returns_404(tmp_path: Path) -> None:
@@ -64,6 +74,26 @@ def test_lifespan_synthetic_mode_creates_shared_client(
         assert app.state.ebay_client_factory() is ebay_client
 
     assert app.state.http_client.is_closed is True
+
+
+def test_live_mode_shows_live_badge_without_synthetic_banner(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("ZEAL_EBAY_MODE", "live")
+    monkeypatch.setenv("EBAY_CLIENT_ID", "client-id")
+    monkeypatch.setenv("EBAY_CLIENT_SECRET", "client-secret")
+    monkeypatch.delenv("EBAY_ENVIRONMENT", raising=False)
+    app = create_app(_seeded_db(tmp_path))
+
+    with TestClient(app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Mode: Live eBay" in response.text
+    assert "Viewing seeded baseline recommendations. Live eBay data is not connected yet." not in (
+        response.text
+    )
 
 
 def test_lifespan_preserves_existing_ebay_client_factory_override(

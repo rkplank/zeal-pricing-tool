@@ -19,5 +19,18 @@ def pricing_list(request: Request) -> object:
     return templates.TemplateResponse(
         request,
         "dashboard.html",
-        {"rows": rows, "title": "Pricing List"},
+        {
+            "rows": rows,
+            "title": "Pricing List",
+            **_mode_context(request),
+        },
     )
+
+
+def _mode_context(request: Request) -> dict[str, object]:
+    config = request.app.state.zeal_config
+    is_synthetic = config.ebay_mode == "synthetic"
+    return {
+        "ebay_mode_label": "Synthetic" if is_synthetic else "Live eBay",
+        "is_synthetic_mode": is_synthetic,
+    }
