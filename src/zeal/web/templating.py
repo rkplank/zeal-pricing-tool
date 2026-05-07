@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
@@ -12,13 +13,15 @@ def configure_template_filters() -> None:
     templates.env.filters["pct"] = _format_pct
     templates.env.filters["pp"] = _format_pp
     templates.env.filters["channel"] = _format_channel
+    templates.env.filters["confidence"] = _format_confidence
+    templates.env.filters["datetime"] = _format_datetime
     templates.env.filters["step_label"] = _format_step_label
     templates.env.tests["status_step"] = _is_status_step
 
 
-def _format_pct(value: object) -> str:
+def _format_pct(value: object, missing: str = "No recommendation") -> str:
     if value is None:
-        return "—"
+        return missing
     if isinstance(value, int | float):
         return f"{float(value) * 100:.1f}%"
     return str(value)
@@ -33,12 +36,43 @@ def _format_pp(value: object) -> str:
     return str(value)
 
 
+def _format_confidence(value: object) -> str:
+    labels = {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "none": "No eBay data",
+    }
+    return labels.get(str(value), str(value))
+
+
+def _format_datetime(value: object) -> str:
+    if value is None:
+        return "never"
+    raw = str(value).strip()
+    if raw == "":
+        return "never"
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            dt = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return raw
+    hour = dt.strftime("%I").lstrip("0") or "0"
+    return f"{dt.strftime('%b')} {dt.day}, {dt.year}, {hour}:{dt.strftime('%M %p')}"
+
+
 def _format_channel(value: object) -> str:
     labels = {
         "online_sell": "Online sell",
         "in_mail_buy": "In-mail buy",
         "in_store_buy": "In-store buy",
         "electronic_buy": "Electronic buy",
+        "buy_mail": "In-mail buy",
+        "buy_electronic": "Electronic buy",
+        "sell": "Sell",
+        "marketplace_sell": "Marketplace sell",
     }
     return labels.get(str(value), str(value))
 

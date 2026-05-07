@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from zeal.config import ZealConfig
 from zeal.db.connection import apply_schema, get_connection
 from zeal.db.seed import BASELINE_FIXTURE, seed_demo_data
 from zeal.ingestion.ebay_client import EbaySoldListing
@@ -63,6 +64,18 @@ def _latest_row(db_path: Path) -> sqlite3.Row | None:
         conn.close()
 
 
+def _create_live_app(db_path: Path):
+    app = create_app(db_path)
+    app.state.zeal_config = ZealConfig(
+        ebay_mode="live",
+        ebay_client_id="client-id",
+        ebay_client_secret="client-secret",
+        ebay_environment="production",
+        db_path=db_path,
+    )
+    return app
+
+
 # ---------------------------------------------------------------------------
 # Slow eBay client (suspends forever — keeps the background task pending)
 # ---------------------------------------------------------------------------
@@ -86,7 +99,7 @@ class _SlowClient:
 
 
 def test_status_no_runs_returns_idle_never(tmp_path: Path) -> None:
-    app = create_app(_bare_db(tmp_path))
+    app = _create_live_app(_bare_db(tmp_path))
     client = TestClient(app)
 
     response = client.get("/refresh/status")
@@ -96,9 +109,21 @@ def test_status_no_runs_returns_idle_never(tmp_path: Path) -> None:
     assert "never" in response.text
 
 
+def test_synthetic_status_disables_refresh(tmp_path: Path) -> None:
+    app = create_app(_seeded_db(tmp_path))
+    client = TestClient(app)
+
+    response = client.get("/refresh/status")
+
+    assert response.status_code == 200
+    assert "Refresh disabled" in response.text
+    assert "Synthetic mode uses seeded baseline recommendations" in response.text
+    assert 'hx-post="/refresh"' not in response.text
+
+
 def test_status_while_running_returns_running_partial(tmp_path: Path) -> None:
     db_path = _seeded_db(tmp_path)
-    app = create_app(db_path)
+    app = _create_live_app(db_path)
     app.state.ebay_client_factory = lambda: _SlowClient()
     client = TestClient(app)
 
@@ -113,7 +138,7 @@ def test_status_while_running_returns_running_partial(tmp_path: Path) -> None:
 
 def test_status_after_run_finishes_returns_idle_with_hx_trigger(tmp_path: Path) -> None:
     db_path = _seeded_db(tmp_path)
-    app = create_app(db_path)
+    app = _create_live_app(db_path)
     # Default SyntheticEbayClient — fast, completes quickly
     client = TestClient(app)
 
@@ -145,13 +170,20 @@ def test_status_failed_run_returns_idle_with_timestamp(tmp_path: Path) -> None:
     conn.close()
 
     app = create_app(db_path)
+    app.state.zeal_config = ZealConfig(
+        ebay_mode="live",
+        ebay_client_id="client-id",
+        ebay_client_secret="client-secret",
+        ebay_environment="production",
+        db_path=db_path,
+    )
     client = TestClient(app)
 
     response = client.get("/refresh/status")
 
     assert response.status_code == 200
     assert "Refresh now" in response.text
-    assert "2025-06-01T12:00:00" in response.text
+    assert "Jun 1, 2025, 12:00 PM" in response.text
 
 
 def test_status_partial_run_returns_idle_with_timestamp(tmp_path: Path) -> None:
@@ -165,13 +197,20 @@ def test_status_partial_run_returns_idle_with_timestamp(tmp_path: Path) -> None:
     conn.close()
 
     app = create_app(db_path)
+    app.state.zeal_config = ZealConfig(
+        ebay_mode="live",
+        ebay_client_id="client-id",
+        ebay_client_secret="client-secret",
+        ebay_environment="production",
+        db_path=db_path,
+    )
     client = TestClient(app)
 
     response = client.get("/refresh/status")
 
     assert response.status_code == 200
     assert "Refresh now" in response.text
-    assert "2025-06-02T08:30:00" in response.text
+    assert "Jun 2, 2025, 8:30 AM" in response.text
 
 
 # ---------------------------------------------------------------------------
@@ -181,7 +220,7 @@ def test_status_partial_run_returns_idle_with_timestamp(tmp_path: Path) -> None:
 
 def test_post_refresh_starts_run_returns_running_partial(tmp_path: Path) -> None:
     db_path = _seeded_db(tmp_path)
-    app = create_app(db_path)
+    app = _create_live_app(db_path)
     app.state.ebay_client_factory = lambda: _SlowClient()
     client = TestClient(app)
 
@@ -198,7 +237,7 @@ def test_post_refresh_starts_run_returns_running_partial(tmp_path: Path) -> None
 
 def test_post_refresh_while_in_flight_returns_409(tmp_path: Path) -> None:
     db_path = _seeded_db(tmp_path)
-    app = create_app(db_path)
+    app = _create_live_app(db_path)
     app.state.ebay_client_factory = lambda: _SlowClient()
     client = TestClient(app)
 
@@ -215,12 +254,28 @@ def test_post_refresh_with_stale_db_running_row_returns_409(tmp_path: Path) -> N
 
     # Create app WITHOUT entering the lifespan context so the startup hook
     # does not clean up the stale row — simulating the "impossible" path.
-    app = create_app(db_path)
+    app = _create_live_app(db_path)
     client = TestClient(app)  # intentionally not a context manager
 
     response = client.post("/refresh")
 
     assert response.status_code == 409
+
+
+def test_post_refresh_in_synthetic_mode_is_blocked(tmp_path: Path) -> None:
+    db_path = _seeded_db(tmp_path)
+    app = create_app(db_path)
+    client = TestClient(app)
+
+    before = _latest_row(db_path)
+    response = client.post("/refresh")
+    after = _latest_row(db_path)
+
+    assert response.status_code == 409
+    assert "Refresh is disabled in synthetic mode" in response.text
+    assert before is not None
+    assert after is not None
+    assert after["id"] == before["id"]
 
 
 # ---------------------------------------------------------------------------

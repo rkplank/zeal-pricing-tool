@@ -27,10 +27,12 @@ def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     assert "Pricing List" in response.text
     assert "Home Depot" in response.text
     assert "Mode: Synthetic" in response.text
-    assert "Viewing seeded baseline recommendations. Live eBay data is not connected yet." in (
+    assert "Refresh is disabled until live eBay credentials are approved" in (
         response.text
     )
+    assert "Synthetic baseline" in response.text
     assert "Delta columns populate after two or more refreshes." in response.text
+    assert "last completed refresh" in response.text
 
 
 def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
@@ -47,6 +49,7 @@ def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
         "No live eBay observations yet. Current recommendations are seeded from the "
         "spreadsheet baseline. Live observations will appear after a successful eBay refresh."
     ) in response.text
+    assert "Synthetic baseline" in response.text
 
 
 def test_missing_merchant_returns_404(tmp_path: Path) -> None:
@@ -91,7 +94,8 @@ def test_live_mode_shows_live_badge_without_synthetic_banner(
 
     assert response.status_code == 200
     assert "Mode: Live eBay" in response.text
-    assert "Viewing seeded baseline recommendations. Live eBay data is not connected yet." not in (
+    assert "Synthetic baseline" in response.text
+    assert "Refresh is disabled until live eBay credentials are approved" not in (
         response.text
     )
 

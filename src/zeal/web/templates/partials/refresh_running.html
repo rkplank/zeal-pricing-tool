@@ -15,6 +15,6 @@
   <span class="progress-label">Starting&hellip;</span>
   {% endif %}
   {% if started_at %}
-  <span class="elapsed">Started: {{ started_at }}</span>
+  <span class="elapsed">Started: {{ started_at|datetime }}</span>
   {% endif %}
 </div>

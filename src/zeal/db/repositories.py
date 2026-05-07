@@ -36,6 +36,16 @@ class MerchantListRow:
     max_abs_delta_over_n: float | None
     max_abs_delta_channel: str | None
     last_refresh_status: str | None
+    has_live_ebay_observations: bool
+
+
+@dataclass(frozen=True)
+class PricingListSummary:
+    active_merchants: int
+    last_completed_refresh: str | None
+    with_recommendation: int
+    no_data: int
+    live_ebay_observations: int
 
 
 @dataclass(frozen=True)
@@ -80,6 +90,7 @@ class MerchantDetailBundle:
     excluded_ebay_observations: list[EbayObservationRow]
     competitor_observations: list[CompetitorObservationRow]
     recent_refreshes: list[RefreshStatusRow]
+    has_live_ebay_observations: bool
 
 
 def fetch_pricing_list(conn: sqlite3.Connection, *, delta_window: int = 5) -> list[MerchantListRow]:
@@ -102,6 +113,10 @@ def fetch_pricing_list(conn: sqlite3.Connection, *, delta_window: int = 5) -> li
         delta_value, delta_channel = delta_from_prior(history)
         max_delta, max_delta_channel = max_absolute_delta_over_window(history, delta_window)
         status = _latest_refresh_status(conn, latest.refresh_run_id if latest else None)
+        has_live_observations = _has_live_ebay_observations(
+            conn,
+            str(merchant["merchant_id"]),
+        )
         rows.append(
             MerchantListRow(
                 merchant_id=str(merchant["merchant_id"]),
@@ -113,12 +128,49 @@ def fetch_pricing_list(conn: sqlite3.Connection, *, delta_window: int = 5) -> li
                 max_abs_delta_over_n=max_delta,
                 max_abs_delta_channel=max_delta_channel,
                 last_refresh_status=status,
+                has_live_ebay_observations=has_live_observations,
             )
         )
     return sorted(
         rows,
         key=lambda row: abs(row.delta_last_run) if row.delta_last_run is not None else -1.0,
         reverse=True,
+    )
+
+
+def fetch_pricing_list_summary(
+    conn: sqlite3.Connection,
+    rows: list[MerchantListRow],
+) -> PricingListSummary:
+    last_completed = conn.execute(
+        """
+        SELECT completed_at
+        FROM refresh_runs
+        WHERE status IN ('completed', 'partial')
+          AND completed_at IS NOT NULL
+        ORDER BY completed_at DESC, id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    merchants_with_live_observations = conn.execute(
+        """
+        SELECT COUNT(DISTINCT eo.merchant_id)
+        FROM ebay_observations eo
+        JOIN merchants m ON m.merchant_id = eo.merchant_id
+        WHERE m.is_active = 1
+          AND eo.validity_status = 'valid'
+        """
+    ).fetchone()[0]
+    return PricingListSummary(
+        active_merchants=len(rows),
+        last_completed_refresh=(
+            str(last_completed["completed_at"]) if last_completed is not None else None
+        ),
+        with_recommendation=sum(
+            1 for row in rows if row.latest is not None and not row.latest.no_data
+        ),
+        no_data=sum(1 for row in rows if row.latest is not None and row.latest.no_data),
+        live_ebay_observations=int(merchants_with_live_observations),
     )
 
 
@@ -147,6 +199,7 @@ def fetch_merchant_detail(
         excluded_ebay_observations=_fetch_ebay_observations(conn, merchant_id, "excluded"),
         competitor_observations=_fetch_competitor_observations(conn, merchant_id),
         recent_refreshes=_fetch_recent_refreshes(conn, merchant_id),
+        has_live_ebay_observations=_has_live_ebay_observations(conn, merchant_id),
     )
 
 
@@ -247,6 +300,20 @@ def _latest_refresh_status(conn: sqlite3.Connection, refresh_run_id: int | None)
         return None
     row = conn.execute("SELECT status FROM refresh_runs WHERE id = ?", (refresh_run_id,)).fetchone()
     return str(row["status"]) if row is not None else None
+
+
+def _has_live_ebay_observations(conn: sqlite3.Connection, merchant_id: str) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM ebay_observations
+        WHERE merchant_id = ?
+          AND validity_status = 'valid'
+        LIMIT 1
+        """,
+        (merchant_id,),
+    ).fetchone()
+    return row is not None
 
 
 def _fetch_ebay_observations(

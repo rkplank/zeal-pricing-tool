@@ -92,6 +92,12 @@ async def _run_in_background(db_path: Path, ebay_client_factory: object) -> None
 
 @router.post("/refresh")
 async def start_refresh(request: Request) -> object:
+    if request.app.state.zeal_config.ebay_mode == "synthetic":
+        return HTMLResponse(
+            status_code=409,
+            content="Refresh is disabled in synthetic mode",
+        )
+
     async with request.app.state.refresh_lock:
         task: asyncio.Task[object] | None = request.app.state.refresh_task
         if task is not None and not task.done():
@@ -151,7 +157,10 @@ async def refresh_status(request: Request) -> object:
     response = templates.TemplateResponse(
         request,
         "partials/refresh_idle.html",
-        {"last_completed": last["completed_at"] if last else None},
+        {
+            "last_completed": last["completed_at"] if last else None,
+            **_mode_context(request),
+        },
     )
     # Signal list re-fetch only when transitioning from a task started in this
     # server session (had_task) to a terminal state, so page-load requests for
@@ -160,3 +169,12 @@ async def refresh_status(request: Request) -> object:
         response.headers["HX-Trigger"] = "refreshList"
         request.app.state.refresh_task = None
     return response
+
+
+def _mode_context(request: Request) -> dict[str, object]:
+    config = request.app.state.zeal_config
+    is_synthetic = config.ebay_mode == "synthetic"
+    return {
+        "ebay_mode_label": "Synthetic" if is_synthetic else "Live eBay",
+        "is_synthetic_mode": is_synthetic,
+    }

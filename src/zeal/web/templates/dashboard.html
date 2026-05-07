@@ -13,9 +13,25 @@
   </div>
 </section>
 
+<section id="status-strip"
+         class="status-strip"
+         aria-label="Dashboard status"
+         hx-get="/"
+         hx-select="#status-strip"
+         hx-target="#status-strip"
+         hx-swap="outerHTML"
+         hx-trigger="refreshList from:body">
+  <span><strong>{{ summary.active_merchants }}</strong> active merchants</span>
+  <span><strong>{{ ebay_mode_label }}</strong> mode</span>
+  <span><strong>{{ summary.last_completed_refresh|datetime }}</strong> last completed refresh</span>
+  <span><strong>{{ summary.with_recommendation }}</strong> with recommendation</span>
+  <span><strong>{{ summary.no_data }}</strong> with No Data</span>
+  <span><strong>{{ summary.live_ebay_observations }}</strong> live eBay observations</span>
+</section>
+
 {% if is_synthetic_mode %}
 <div class="mode-banner">
-  Viewing seeded baseline recommendations. Live eBay data is not connected yet.
+  Viewing seeded baseline recommendations. Refresh is disabled until live eBay credentials are approved so demo data stays intact.
 </div>
 {% endif %}
 
@@ -29,7 +45,7 @@
   <table class="pricing-table">
     <thead>
       <tr>
-        <th colspan="7"></th>
+        <th colspan="8"></th>
         <th colspan="2" class="delta-note">Delta columns populate after two or more refreshes.</th>
         <th colspan="2"></th>
       </tr>
@@ -41,6 +57,7 @@
         <th>In-mail buy</th>
         <th>In-store buy</th>
         <th>Electronic buy</th>
+        <th>Source</th>
         <th>Delta last run</th>
         <th>Max abs delta N=5</th>
         <th>eBay confidence</th>
@@ -53,23 +70,46 @@
         <td><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
         <td>{{ row.tier }}</td>
         {% if row.latest %}
-        <td>{{ row.latest.ebay_sell_pct|pct }}</td>
+        <td>{{ row.latest.ebay_sell_pct|pct("No eBay data") }}</td>
         <td>{{ row.latest.online_sell|pct }}</td>
-        <td>{{ row.latest.in_mail_buy|pct }}</td>
-        <td>{{ row.latest.in_store_buy|pct }}</td>
-        <td>{{ row.latest.electronic_buy|pct }}</td>
+        <td>{% if not row.latest.config_snapshot.in_mail_eligible %}Not offered{% else %}{{ row.latest.in_mail_buy|pct }}{% endif %}</td>
+        <td>{% if not row.latest.config_snapshot.in_store_eligible %}Not offered{% else %}{{ row.latest.in_store_buy|pct }}{% endif %}</td>
+        <td>{% if not row.latest.config_snapshot.electronic_eligible %}Not offered{% else %}{{ row.latest.electronic_buy|pct }}{% endif %}</td>
         <td>
+          {% if row.latest.no_data %}
+          <span class="badge badge-muted">No Data</span>
+          {% elif row.latest.config_snapshot.online_sell_override is not none or row.latest.config_snapshot.electronic_buy_override is not none %}
+          <span class="badge badge-muted">Manual override</span>
+          {% elif is_synthetic_mode or not row.has_live_ebay_observations %}
+          <span class="badge badge-muted">Synthetic baseline</span>
+          {% else %}
+          <span class="badge badge-muted">Live eBay</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if row.delta_last_run is none %}
+          Needs 2 runs
+          {% elif row.delta_last_run == 0 %}
+          No change
+          {% else %}
           {{ row.delta_last_run|pp }}
           {% if row.delta_last_run_channel %}<span>{{ row.delta_last_run_channel|channel }}</span>{% endif %}
+          {% endif %}
         </td>
         <td>
+          {% if row.max_abs_delta_over_n is none %}
+          Needs 2 runs
+          {% elif row.max_abs_delta_over_n == 0 %}
+          No change
+          {% else %}
           {{ row.max_abs_delta_over_n|pp }}
           {% if row.max_abs_delta_channel %}<span>{{ row.max_abs_delta_channel|channel }}</span>{% endif %}
+          {% endif %}
         </td>
-        <td><span class="badge">{{ row.latest.ebay_confidence }}</span></td>
-        <td>{{ row.latest.computed_at }}</td>
+        <td><span class="badge">{{ row.latest.ebay_confidence|confidence }}</span></td>
+        <td>{{ row.latest.computed_at|datetime }}</td>
         {% else %}
-        <td colspan="9" class="empty">No recommendation seeded yet</td>
+        <td colspan="10" class="empty">No recommendation seeded yet</td>
         {% endif %}
       </tr>
       {% endfor %}

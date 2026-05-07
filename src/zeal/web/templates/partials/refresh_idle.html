@@ -1,4 +1,10 @@
 <div class="refresh-idle">
+  {% if is_synthetic_mode %}
+  <button class="btn-refresh" type="button" disabled>Refresh disabled</button>
+  <span class="refresh-last">
+    Synthetic mode uses seeded baseline recommendations. Switch to live eBay mode after credentials are approved.
+  </span>
+  {% else %}
   <button
     class="btn-refresh"
     hx-post="/refresh"
@@ -7,6 +13,7 @@
   >Refresh now</button>
   <span class="refresh-last">
     Last completed:
-    {% if last_completed %}{{ last_completed }}{% else %}never{% endif %}
+    {{ last_completed|datetime }}
   </span>
+  {% endif %}
 </div>

@@ -14,11 +14,11 @@
     {% for obs in merchant.competitor_observations %}
     <tr>
       <td>{{ obs.source_name }}</td>
-      <td>{{ obs.channel }}</td>
-      <td>{{ obs.price_pct|pct }}</td>
-      <td>{{ obs.availability }}</td>
-      <td>{{ obs.confidence }}</td>
-      <td>{{ obs.observed_at }}</td>
+      <td>{{ obs.channel|channel }}</td>
+      <td>{{ obs.price_pct|pct("No recommendation") }}</td>
+      <td>{% if obs.availability == "no_data" %}No data{% elif obs.availability == "unavailable" %}Not offered{% else %}Available{% endif %}</td>
+      <td>{{ obs.confidence|confidence }}</td>
+      <td>{{ obs.observed_at|datetime }}</td>
     </tr>
     {% endfor %}
   </tbody>

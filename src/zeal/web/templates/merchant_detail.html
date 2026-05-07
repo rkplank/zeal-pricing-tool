@@ -6,18 +6,31 @@
 <section class="section-head">
   <div>
     <h1>{{ merchant.display_name }}</h1>
-    <p>{{ merchant.tier }} tier</p>
+    <p>
+      {{ merchant.tier }} tier
+      {% if merchant.latest %}
+        {% if merchant.latest.no_data %}
+        <span class="badge badge-muted">No Data</span>
+        {% elif merchant.latest.config_snapshot.online_sell_override is not none or merchant.latest.config_snapshot.electronic_buy_override is not none %}
+        <span class="badge badge-muted">Manual override</span>
+        {% elif is_synthetic_mode or not merchant.has_live_ebay_observations %}
+        <span class="badge badge-muted">Synthetic baseline</span>
+        {% else %}
+        <span class="badge badge-muted">Live eBay</span>
+        {% endif %}
+      {% endif %}
+    </p>
   </div>
 </section>
 
 {% if merchant.latest %}
 <section class="metric-grid">
   <div><span>Online sell</span><strong>{{ merchant.latest.online_sell|pct }}</strong></div>
-  <div><span>In-mail buy</span><strong>{{ merchant.latest.in_mail_buy|pct }}</strong></div>
-  <div><span>In-store buy</span><strong>{{ merchant.latest.in_store_buy|pct }}</strong></div>
-  <div><span>Electronic buy</span><strong>{{ merchant.latest.electronic_buy|pct }}</strong></div>
-  <div><span>eBay sell</span><strong>{{ merchant.latest.ebay_sell_pct|pct }}</strong></div>
-  <div><span>Confidence</span><strong>{{ merchant.latest.ebay_confidence }}</strong></div>
+  <div><span>In-mail buy</span><strong>{% if not merchant.latest.config_snapshot.in_mail_eligible %}Not offered{% else %}{{ merchant.latest.in_mail_buy|pct }}{% endif %}</strong></div>
+  <div><span>In-store buy</span><strong>{% if not merchant.latest.config_snapshot.in_store_eligible %}Not offered{% else %}{{ merchant.latest.in_store_buy|pct }}{% endif %}</strong></div>
+  <div><span>Electronic buy</span><strong>{% if not merchant.latest.config_snapshot.electronic_eligible %}Not offered{% else %}{{ merchant.latest.electronic_buy|pct }}{% endif %}</strong></div>
+  <div><span>eBay sell</span><strong>{{ merchant.latest.ebay_sell_pct|pct("No eBay data") }}</strong></div>
+  <div><span>Confidence</span><strong>{{ merchant.latest.ebay_confidence|confidence }}</strong></div>
 </section>
 
 <section class="panel">
@@ -36,7 +49,7 @@
     <tbody>
       {% for obs in merchant.recent_ebay_observations %}
       <tr>
-        <td>{{ obs.sold_at }}</td>
+        <td>{{ obs.sold_at|datetime }}</td>
         <td>{{ obs.title }}</td>
         <td>{{ obs.face_value }}</td>
         <td>{{ obs.sale_price }}</td>
@@ -58,10 +71,10 @@
     <tbody>
       {% for obs in merchant.excluded_ebay_observations %}
       <tr>
-        <td>{{ obs.sold_at }}</td>
+        <td>{{ obs.sold_at|datetime }}</td>
         <td>{{ obs.title }}</td>
         <td>{{ obs.sell_pct|pct }}</td>
-        <td>{{ obs.exclusion_reason or "—" }}</td>
+        <td>{{ obs.exclusion_reason or "No exclusion reason" }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -93,12 +106,12 @@
     <tbody>
       {% for rec in merchant.history %}
       <tr>
-        <td>{{ rec.computed_at }}</td>
+        <td>{{ rec.computed_at|datetime }}</td>
         <td>{{ rec.online_sell|pct }}</td>
-        <td>{{ rec.in_mail_buy|pct }}</td>
-        <td>{{ rec.in_store_buy|pct }}</td>
-        <td>{{ rec.electronic_buy|pct }}</td>
-        <td>{{ rec.ebay_confidence }}</td>
+        <td>{% if not rec.config_snapshot.in_mail_eligible %}Not offered{% else %}{{ rec.in_mail_buy|pct }}{% endif %}</td>
+        <td>{% if not rec.config_snapshot.in_store_eligible %}Not offered{% else %}{{ rec.in_store_buy|pct }}{% endif %}</td>
+        <td>{% if not rec.config_snapshot.electronic_eligible %}Not offered{% else %}{{ rec.electronic_buy|pct }}{% endif %}</td>
+        <td>{{ rec.ebay_confidence|confidence }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -118,9 +131,9 @@
       <tr>
         <td>{{ run.refresh_run_id }}</td>
         <td>{{ run.status }}</td>
-        <td>{{ run.started_at }}</td>
-        <td>{{ run.completed_at or "—" }}</td>
-        <td>{% if run.has_recommendation %}present{% else %}not present{% endif %}</td>
+        <td>{{ run.started_at|datetime }}</td>
+        <td>{{ run.completed_at|datetime }}</td>
+        <td>{% if run.has_recommendation %}Present{% else %}No recommendation{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>
