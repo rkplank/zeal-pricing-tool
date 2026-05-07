@@ -15,6 +15,22 @@ Sources:
 Note: `zeal_pricing_handoff_dashboard_polish_2026-05-06.md` was not present in
 this checkout when this plan was written.
 
+## 2026-05-07 Production Scope Finding
+
+Credential-day testing found an entitlement mismatch:
+
+- The sandbox keyset has `buy.marketplace.insights`.
+- The production keyset does not have `buy.marketplace.insights`.
+- Production `smoke-ebay` fails during OAuth token minting with `invalid_scope`.
+- Base production OAuth still succeeds, so the production keyset is valid but
+  cannot mint the Marketplace Insights scope.
+
+Conclusion: production Marketplace Insights entitlement is not active for the
+production keyset. Do not run the first-five pilot and do not fall back to Browse
+API. Sold-listing validation remains blocked until eBay enables
+`buy.marketplace.insights` for the production Client Credential Grant Type
+scopes.
+
 ## 1. Pre-Credential Assumptions And Scope
 
 Assumptions:
@@ -248,6 +264,15 @@ Auth/access failure:
   Insights endpoint denied.
 - Check `.env` values, `ZEAL_EBAY_MODE=live`, `EBAY_ENVIRONMENT`, client ID/secret,
   and whether Marketplace Insights access is actually granted.
+- If production OAuth fails with `invalid_scope` for
+  `buy.marketplace.insights`, the production keyset cannot mint the Marketplace
+  Insights scope. Check the eBay Developer Portal under Production -> Client
+  Credential Grant Type scopes and confirm `buy.marketplace.insights` is assigned
+  to the production keyset.
+- A sandbox keyset showing `buy.marketplace.insights` is not sufficient for
+  production validation. Production must have the same Marketplace Insights
+  entitlement.
+- Do not run the first-five pilot while `invalid_scope` is present.
 - Do not fall back to Browse API for sold-listing validation.
 
 Rate limit failure:

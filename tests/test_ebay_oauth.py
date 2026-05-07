@@ -109,6 +109,32 @@ async def test_4xx_raises_ebay_auth_error_with_description() -> None:
 
 
 @pytest.mark.asyncio
+async def test_invalid_scope_raises_operator_guidance() -> None:
+    with respx.mock:
+        respx.post(_TOKEN_URL).mock(
+            return_value=httpx.Response(
+                400,
+                json={
+                    "error": "invalid_scope",
+                    "error_description": (
+                        "The requested scope is invalid, unknown, malformed, "
+                        "or exceeds the scope granted to the client"
+                    ),
+                },
+            )
+        )
+        async with httpx.AsyncClient() as http:
+            manager = _make_manager(http)
+            with pytest.raises(EbayAuthError) as excinfo:
+                await manager.get_access_token()
+
+    message = str(excinfo.value)
+    assert "production keyset cannot mint the Marketplace Insights scope" in message
+    assert "Production -> Client Credential Grant Type scopes" in message
+    assert "Do not run the first-five pilot or fall back to Browse API" in message
+
+
+@pytest.mark.asyncio
 async def test_5xx_raises_ebay_server_error() -> None:
     with respx.mock:
         respx.post(_TOKEN_URL).mock(return_value=httpx.Response(503))

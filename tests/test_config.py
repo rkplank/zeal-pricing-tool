@@ -6,6 +6,7 @@ from zeal.config import ZealConfig
 
 
 def _clear_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PYTHON_DOTENV_DISABLED", "1")
     for name in (
         "ZEAL_EBAY_MODE",
         "EBAY_CLIENT_ID",

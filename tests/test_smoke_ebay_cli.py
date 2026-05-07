@@ -23,6 +23,7 @@ def _seeded_db(tmp_path: Path) -> Path:
 
 
 def _clear_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PYTHON_DOTENV_DISABLED", "1")
     for name in (
         "ZEAL_EBAY_MODE",
         "EBAY_CLIENT_ID",
@@ -37,8 +38,9 @@ def test_synthetic_mode_known_merchant_prints_sections(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
-) -> None:
+    ) -> None:
     _clear_env(monkeypatch)
+    monkeypatch.setenv("ZEAL_EBAY_MODE", "synthetic")
     monkeypatch.setenv("ZEAL_DB_PATH", str(_seeded_db(tmp_path)))
     monkeypatch.setattr(sys, "argv", ["zeal", "smoke-ebay", "--merchant", "home_depot"])
 
@@ -59,8 +61,9 @@ def test_unknown_merchant_exits_nonzero(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
-) -> None:
+    ) -> None:
     _clear_env(monkeypatch)
+    monkeypatch.setenv("ZEAL_EBAY_MODE", "synthetic")
     monkeypatch.setenv("ZEAL_DB_PATH", str(_seeded_db(tmp_path)))
     monkeypatch.setattr(sys, "argv", ["zeal", "smoke-ebay", "--merchant", "not_real"])
 
@@ -87,6 +90,7 @@ def test_ebay_client_error_prints_clean_error(
             raise EbayAuthError("bad credentials")
 
     _clear_env(monkeypatch)
+    monkeypatch.setenv("ZEAL_EBAY_MODE", "synthetic")
     monkeypatch.setenv("ZEAL_DB_PATH", str(_seeded_db(tmp_path)))
     monkeypatch.setattr(sys, "argv", ["zeal", "smoke-ebay", "--merchant", "home_depot"])
     monkeypatch.setattr(cli, "create_ebay_client", lambda **kwargs: _FailingClient())
@@ -96,3 +100,39 @@ def test_ebay_client_error_prints_clean_error(
 
     assert excinfo.value.code == 1
     assert "EbayAuthError: bad credentials" in capsys.readouterr().out
+
+
+def test_invalid_scope_guidance_prints_clean_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    class _FailingClient:
+        async def sold_listings_for_merchant(
+            self,
+            *,
+            merchant_id: str,
+            inclusion_regex: str,
+            exclusion_regex: str | None,
+        ) -> Sequence[EbaySoldListing]:
+            raise EbayAuthError(
+                "The production keyset cannot mint the Marketplace Insights scope. "
+                "Check the eBay Developer Portal under Production -> Client Credential "
+                "Grant Type scopes. Do not run the first-five pilot or fall back to "
+                "Browse API."
+            )
+
+    _clear_env(monkeypatch)
+    monkeypatch.setenv("ZEAL_EBAY_MODE", "synthetic")
+    monkeypatch.setenv("ZEAL_DB_PATH", str(_seeded_db(tmp_path)))
+    monkeypatch.setattr(sys, "argv", ["zeal", "smoke-ebay", "--merchant", "home_depot"])
+    monkeypatch.setattr(cli, "create_ebay_client", lambda **kwargs: _FailingClient())
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main()
+
+    output = capsys.readouterr().out
+    assert excinfo.value.code == 1
+    assert "EbayAuthError: The production keyset cannot mint" in output
+    assert "Production -> Client Credential Grant Type scopes" in output
+    assert "Do not run the first-five pilot or fall back to Browse API" in output

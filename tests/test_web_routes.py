@@ -93,6 +93,7 @@ def test_lifespan_synthetic_mode_creates_shared_client(
     monkeypatch.delenv("EBAY_CLIENT_ID", raising=False)
     monkeypatch.delenv("EBAY_CLIENT_SECRET", raising=False)
     monkeypatch.delenv("EBAY_ENVIRONMENT", raising=False)
+    monkeypatch.setenv("ZEAL_EBAY_MODE", "synthetic")
     app = create_app(_seeded_db(tmp_path))
 
     with TestClient(app):

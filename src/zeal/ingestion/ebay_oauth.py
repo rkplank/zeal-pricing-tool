@@ -36,6 +36,7 @@ class EbayTokenManager:
         self._credentials = base64.b64encode(
             f"{client_id}:{client_secret}".encode()
         ).decode()
+        self._environment = environment
         self._token_url = _BASE_URLS[environment] + _TOKEN_PATH
         self._http = http_client
         self._token: str | None = None
@@ -81,6 +82,23 @@ class EbayTokenManager:
 
         if response.status_code < 500:
             body = response.json()
-            raise EbayAuthError(body.get("error_description", "OAuth request failed"))
+            error = str(body.get("error", ""))
+            description = str(body.get("error_description", "OAuth request failed"))
+            if error == "invalid_scope":
+                raise EbayAuthError(_invalid_scope_message(self._environment, description))
+            raise EbayAuthError(description)
 
         raise EbayServerError(f"OAuth server error: {response.status_code}")
+
+
+def _invalid_scope_message(environment: str, description: str) -> str:
+    scope = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
+    env_label = "production" if environment == "production" else environment
+    return (
+        f"{description}. The {env_label} keyset cannot mint the Marketplace "
+        f"Insights scope {scope}. Check the eBay Developer Portal under "
+        f"{env_label.title()} -> Client Credential Grant Type scopes and confirm "
+        "buy.marketplace.insights is assigned to this keyset. Do not run the "
+        "first-five pilot or fall back to Browse API; sold-listing validation "
+        "requires Marketplace Insights entitlement."
+    )
