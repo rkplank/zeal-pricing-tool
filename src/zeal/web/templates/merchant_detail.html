@@ -25,15 +25,38 @@
 
 {% if merchant.latest %}
 <section class="metric-grid">
-  <div><span>Online sell</span><strong>{{ merchant.latest.online_sell|pct }}</strong></div>
-  <div><span>In-mail buy</span><strong>{% if not merchant.latest.config_snapshot.in_mail_eligible %}Not offered{% else %}{{ merchant.latest.in_mail_buy|pct }}{% endif %}</strong></div>
+  <div class="metric-primary"><span>Online sell</span><strong>{{ merchant.latest.online_sell|pct }}</strong></div>
+  <div class="metric-primary"><span>In-mail buy</span><strong>{% if not merchant.latest.config_snapshot.in_mail_eligible %}Not offered{% else %}{{ merchant.latest.in_mail_buy|pct }}{% endif %}</strong></div>
   <div><span>In-store buy</span><strong>{% if not merchant.latest.config_snapshot.in_store_eligible %}Not offered{% else %}{{ merchant.latest.in_store_buy|pct }}{% endif %}</strong></div>
   <div><span>Electronic buy</span><strong>{% if not merchant.latest.config_snapshot.electronic_eligible %}Not offered{% else %}{{ merchant.latest.electronic_buy|pct }}{% endif %}</strong></div>
   <div><span>eBay sell</span><strong>{{ merchant.latest.ebay_sell_pct|pct("No eBay data") }}</strong></div>
   <div><span>Confidence</span><strong>{{ merchant.latest.ebay_confidence|confidence }}</strong></div>
 </section>
 
-<section class="panel">
+<section class="recommendation-summary" aria-label="Why this recommendation">
+  <div>
+    <span>Why this recommendation?</span>
+    {% if merchant.latest.no_data %}
+    <strong>No valid eBay signal is available, so the latest row is marked No Data.</strong>
+    {% elif merchant.latest.config_snapshot.online_sell_override is not none or merchant.latest.config_snapshot.electronic_buy_override is not none %}
+    <strong>A manual override in the seeded merchant config sets at least one channel.</strong>
+    {% elif is_synthetic_mode or not merchant.has_live_ebay_observations %}
+    <strong>Seeded spreadsheet-baseline values are displayed until live eBay refresh is enabled.</strong>
+    {% else %}
+    <strong>Live eBay sold listings produced this recommendation.</strong>
+    {% endif %}
+  </div>
+  <div>
+    <span>Confidence</span>
+    <strong>{{ merchant.latest.ebay_confidence|confidence }}</strong>
+  </div>
+  <div>
+    <span>Computed</span>
+    <strong>{{ merchant.latest.computed_at|datetime }}</strong>
+  </div>
+</section>
+
+<section class="panel panel-secondary">
   <h2>Formula Breakdown</h2>
   {% include "partials/breakdown.html" %}
 </section>

@@ -26,7 +26,7 @@
   <span><strong>{{ summary.last_completed_refresh|datetime }}</strong> last completed refresh</span>
   <span><strong>{{ summary.with_recommendation }}</strong> with recommendation</span>
   <span><strong>{{ summary.no_data }}</strong> with No Data</span>
-  <span><strong>{{ summary.live_ebay_observations }}</strong> live eBay observations</span>
+  <span><strong>{{ summary.live_ebay_observations }}</strong> with live eBay observations</span>
 </section>
 
 {% if is_synthetic_mode %}
@@ -66,27 +66,27 @@
     </thead>
     <tbody>
       {% for row in rows %}
-      <tr>
-        <td><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
-        <td>{{ row.tier }}</td>
+      <tr class="{% if not row.latest %}row-no-recommendation{% elif row.latest.no_data %}row-no-data{% elif row.latest.config_snapshot.online_sell_override is not none or row.latest.config_snapshot.electronic_buy_override is not none %}row-manual-override{% elif is_synthetic_mode or not row.has_live_ebay_observations %}row-synthetic{% else %}row-live{% endif %}">
+        <td class="merchant-cell"><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
+        <td class="quiet-cell">{{ row.tier }}</td>
         {% if row.latest %}
-        <td>{{ row.latest.ebay_sell_pct|pct("No eBay data") }}</td>
-        <td>{{ row.latest.online_sell|pct }}</td>
-        <td>{% if not row.latest.config_snapshot.in_mail_eligible %}Not offered{% else %}{{ row.latest.in_mail_buy|pct }}{% endif %}</td>
-        <td>{% if not row.latest.config_snapshot.in_store_eligible %}Not offered{% else %}{{ row.latest.in_store_buy|pct }}{% endif %}</td>
-        <td>{% if not row.latest.config_snapshot.electronic_eligible %}Not offered{% else %}{{ row.latest.electronic_buy|pct }}{% endif %}</td>
+        <td class="quiet-cell">{{ row.latest.ebay_sell_pct|pct("No eBay data") }}</td>
+        <td class="recommendation-cell">{{ row.latest.online_sell|pct }}</td>
+        <td class="recommendation-cell">{% if not row.latest.config_snapshot.in_mail_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.in_mail_buy|pct }}{% endif %}</td>
+        <td class="recommendation-cell">{% if not row.latest.config_snapshot.in_store_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.in_store_buy|pct }}{% endif %}</td>
+        <td class="recommendation-cell">{% if not row.latest.config_snapshot.electronic_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.electronic_buy|pct }}{% endif %}</td>
         <td>
           {% if row.latest.no_data %}
-          <span class="badge badge-muted">No Data</span>
+          <span class="badge badge-warning">No Data</span>
           {% elif row.latest.config_snapshot.online_sell_override is not none or row.latest.config_snapshot.electronic_buy_override is not none %}
-          <span class="badge badge-muted">Manual override</span>
+          <span class="badge badge-override">Manual override</span>
           {% elif is_synthetic_mode or not row.has_live_ebay_observations %}
-          <span class="badge badge-muted">Synthetic baseline</span>
+          <span class="badge badge-synthetic">Synthetic baseline</span>
           {% else %}
-          <span class="badge badge-muted">Live eBay</span>
+          <span class="badge badge-live">Live eBay</span>
           {% endif %}
         </td>
-        <td>
+        <td class="movement-cell">
           {% if row.delta_last_run is none %}
           Needs 2 runs
           {% elif row.delta_last_run == 0 %}
@@ -96,7 +96,7 @@
           {% if row.delta_last_run_channel %}<span>{{ row.delta_last_run_channel|channel }}</span>{% endif %}
           {% endif %}
         </td>
-        <td>
+        <td class="movement-cell">
           {% if row.max_abs_delta_over_n is none %}
           Needs 2 runs
           {% elif row.max_abs_delta_over_n == 0 %}
@@ -107,7 +107,7 @@
           {% endif %}
         </td>
         <td><span class="badge">{{ row.latest.ebay_confidence|confidence }}</span></td>
-        <td>{{ row.latest.computed_at|datetime }}</td>
+        <td class="quiet-cell">{{ row.latest.computed_at|datetime }}</td>
         {% else %}
         <td colspan="10" class="empty">No recommendation seeded yet</td>
         {% endif %}

@@ -29,7 +29,7 @@ Start with the status strip:
 - Last completed refresh: most recent completed or partial run.
 - With recommendation: merchants whose latest row has usable recommendation values.
 - With No Data: merchants whose latest row could not produce a data-backed recommendation.
-- Live eBay observations: valid sold-listing observations already stored for active merchants.
+- With live eBay observations: active merchants with at least one valid sold-listing observation stored.
 
 Then scan the table:
 
@@ -38,14 +38,17 @@ Then scan the table:
 - In-mail, in-store, and electronic buy are customer payout recommendations by channel.
 - "Not offered" means the channel is ineligible for that merchant.
 - Source shows whether the latest row came from the synthetic baseline, live eBay, a manual override, or a No Data state.
+- Rows with No Data or manual overrides get a subtle visual tint so they are easier to spot while scanning.
 - Delta columns need at least two comparable runs. "No change" means a comparable value exists and did not move.
 - Confidence "No eBay data" means no valid eBay signal was available for that row.
 
 ## Reading merchant detail
 
-The merchant page starts with the latest recommendation cards and a compact source badge. Use this page when a list row needs explanation.
+The merchant page starts with the latest recommendation cards and a compact source badge. The two most important cards are Online sell and In-mail buy, followed by the other channel values, eBay sell, and Confidence.
 
-Formula Breakdown shows the worked recommendation logic for each channel. Normal rows show percentage inputs, fees, margins, and the final value. Status rows explain why a channel is Not offered, No Data, or override-based.
+The "Why this recommendation?" strip explains the source in one sentence, repeats confidence, and shows when the latest row was computed. Use it to confirm whether the recommendation is Synthetic baseline, Manual override, Live eBay, or No Data before reading the full formula.
+
+Formula Breakdown shows the worked recommendation logic for each channel. Normal rows show percentage inputs, fees, margins, and the final value. Status rows explain why a channel is Not offered, No Data, or override-based. It is intentionally below the summary so the operator can scan first and audit second.
 
 Recent eBay Observations will show valid sold listings after live refresh is enabled. Excluded eBay Observations will show listings filtered out by the validity rules, with reasons such as suspected partial balance or wrong merchant match.
 
@@ -79,9 +82,10 @@ Low confidence does not block a recommendation. It tells the operator to review 
 
 V1 does not auto-publish prices, track accept/override/skip decisions, edit merchant config in the app, run scheduled refreshes, export CSVs, blend competitor data into recommendations, expose an eBay-weight control, or use internal sale history.
 
-## Feedback questions
+## Things to ask the operator during demo
 
 - Which columns help you decide what to review first?
+- Can you tell quickly which rows need attention?
 - Are any labels unclear or too technical?
 - Does the merchant detail page explain a recommendation quickly enough?
 - Are the No Data and Not offered states distinct enough?

@@ -6,6 +6,8 @@
   --muted: #637083;
   --head: #eef3f8;
   --link: #145ea8;
+  --attention: #8a5b00;
+  --success: #256047;
 }
 
 * {
@@ -46,7 +48,9 @@ a:hover {
 .scope,
 .section-head p,
 .empty,
-.pricing-table span {
+.pricing-table span,
+.quiet-cell,
+.muted-label {
   color: var(--muted);
 }
 
@@ -118,7 +122,7 @@ h2 {
 
 h3 {
   font-size: 13px;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 .table-wrap {
@@ -165,6 +169,33 @@ tr:hover td {
   min-width: 1180px;
 }
 
+.pricing-table tr.row-no-data td,
+.pricing-table tr.row-no-recommendation td {
+  background: #fffaf0;
+}
+
+.pricing-table tr.row-manual-override td {
+  background: #f8fbff;
+}
+
+.pricing-table tr.row-live td {
+  background: #fbfffd;
+}
+
+.pricing-table tr:hover td {
+  background: #f4f8fc;
+}
+
+.merchant-cell a,
+.movement-cell,
+.recommendation-cell {
+  font-weight: 700;
+}
+
+.recommendation-cell {
+  color: var(--text);
+}
+
 .pricing-table thead tr:first-child th {
   top: 0;
 }
@@ -195,6 +226,30 @@ tr:hover td {
   color: #465467;
 }
 
+.badge-warning {
+  background: #fff6df;
+  border-color: #edd28b;
+  color: var(--attention);
+}
+
+.badge-override {
+  background: #f0f6ff;
+  border-color: #c8dcee;
+  color: #28527a;
+}
+
+.badge-synthetic {
+  background: #f6f4ef;
+  border-color: #d8d0c1;
+  color: #5a5041;
+}
+
+.badge-live {
+  background: #eaf7f0;
+  border-color: #bfe2cd;
+  color: var(--success);
+}
+
 .btn-refresh:disabled {
   cursor: not-allowed;
   opacity: 0.65;
@@ -209,7 +264,7 @@ tr:hover td {
   display: grid;
   gap: 1px;
   grid-template-columns: repeat(6, minmax(120px, 1fr));
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .metric-grid div {
@@ -229,11 +284,44 @@ tr:hover td {
   font-size: 18px;
 }
 
+.metric-primary strong {
+  font-size: 20px;
+}
+
+.recommendation-summary {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 1px;
+  grid-template-columns: minmax(260px, 2fr) minmax(120px, 1fr) minmax(180px, 1fr);
+  margin-bottom: 14px;
+}
+
+.recommendation-summary div {
+  padding: 10px;
+}
+
+.recommendation-summary span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.recommendation-summary strong {
+  font-size: 13px;
+}
+
 .panel {
   background: #ffffff;
   border: 1px solid var(--border);
   margin-bottom: 14px;
   padding: 12px;
+}
+
+.panel-secondary h2 {
+  color: #39475a;
+  font-size: 14px;
 }
 
 .detail-table th {
@@ -249,7 +337,13 @@ tr:hover td {
 .breakdown-channel {
   border: 1px solid var(--border);
   min-width: 0;
-  padding: 10px;
+  padding: 8px;
+}
+
+.breakdown-caption {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
 }
 
 .breakdown-channel ol {
