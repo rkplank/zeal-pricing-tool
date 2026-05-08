@@ -70,11 +70,19 @@ a:hover {
 }
 
 .mode-banner {
+  align-items: baseline;
   background: #fff8e6;
   border: 1px solid #eed48b;
   color: #624a08;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   margin-bottom: 12px;
-  padding: 8px 10px;
+  padding: 10px 12px;
+}
+
+.mode-banner span {
+  color: #624a08;
 }
 
 .status-strip {
@@ -152,7 +160,7 @@ th {
 td,
 th {
   border-right: 1px solid var(--border);
-  padding: 6px 8px;
+  padding: 5px 8px;
   vertical-align: top;
 }
 
@@ -194,6 +202,10 @@ tr:hover td {
 
 .recommendation-cell {
   color: var(--text);
+}
+
+.numeric-cell {
+  text-align: right;
 }
 
 .pricing-table thead tr:first-child th {
@@ -317,6 +329,12 @@ tr:hover td {
   border: 1px solid var(--border);
   margin-bottom: 14px;
   padding: 12px;
+}
+
+.panel-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 10px;
 }
 
 .panel-secondary h2 {

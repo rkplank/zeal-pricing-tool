@@ -316,7 +316,7 @@ v1 implements this rule faithfully, with extended validity filters and several h
 
 eBay **Marketplace Insights API**, sold listings, US location only, sorted by end date descending. This is the correct API surface for sold-listing data. The Browse API — which is sometimes confused for this purpose — returns active (live) listings only and does not expose completed or sold listing data; it is not suitable for computing the eBay sell %.
 
-Access to the Marketplace Insights API is a Phase 3 prerequisite. It is a separately gated program beyond the general eBay developer program and requires a distinct business-case application. The general developer application has been submitted; the specific tier and whether Marketplace Insights will be approved is pending. See `architecture.md` §12 Q1 for current access status and decisions_log.md 2026-05-05 for fallback contingencies.
+Access to the Marketplace Insights API is a Phase 3 prerequisite. It is a separately gated program beyond the general eBay developer program and requires a distinct business-case application. As of 2026-05-08, eBay has not yet responded; production Marketplace Insights entitlement remains blocked because the production keyset cannot mint `buy.marketplace.insights`. Production validation must wait until that scope is enabled. Browse API fallback is not allowed because Browse does not provide sold-listing data. See `architecture.md` §12 Q1 for current access status and decisions_log.md 2026-05-05 / 2026-05-08 for fallback and waiting-state decisions.
 
 ### 6.2 Validity filters
 

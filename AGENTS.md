@@ -19,13 +19,13 @@ Read the relevant docs before any non-trivial change. If code and docs disagree,
 
 ## Current v1 status
 
-Current status at the 2026-05-06 handoff:
+Current status as of 2026-05-08, latest verified commit `3034e1538774714d0b52ca6c70fbb6004704f25f` (`harden marketplace insights readiness`):
 
 - Phase 1 complete: spreadsheet parser, pricing engine, SQLite schema, golden baseline tests.
-- Phase 2 complete: FastAPI read-only dashboard with seeded/synthetic recommendations.
-- Phase 3 mostly complete: listing filter, refresh orchestrator, refresh routes, dashboard refresh button, and live eBay Marketplace Insights client with OAuth and mocked tests.
-- Remaining PR before "credentials are the only blocker": mode toggle + live/synthetic eBay client factory + `.env.example` + `zeal smoke-ebay` CLI + credential-day README runbook.
-- eBay developer-program response is still pending; live validation happens only on credential day.
+- FastAPI read-only dashboard implemented with seeded/synthetic recommendations and merchant detail review.
+- Listing filter, refresh orchestrator, refresh routes, dashboard refresh button, live/synthetic eBay client factory, `.env.example`, and `zeal smoke-ebay` CLI exist with mocked tests.
+- Production Marketplace Insights remains blocked: the production keyset cannot mint `buy.marketplace.insights`, and eBay has not yet responded with production entitlement.
+- Current productive work is synthetic-mode dashboard UI/usability review plus documentation alignment while waiting for eBay.
 
 Update this section when the project state changes materially.
 

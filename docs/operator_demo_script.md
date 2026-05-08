@@ -1,93 +1,137 @@
 # Operator Demo Script
 
-Use this script to walk through the dashboard while eBay Marketplace Insights credentials are still pending.
+Use this script for a synthetic-mode usability walkthrough while production eBay
+Marketplace Insights access is still blocked. The goal is to learn whether the
+dashboard supports the operator's real review workflow before live sold listings
+are available.
 
-## What the dashboard does today
+## Setup
 
-The dashboard is a read-only pricing review tool. It shows one active merchant per row, the latest recommendation for each pricing channel, confidence, recommendation history, formula breakdowns, and reference panels for future live-market data.
+Run the dashboard in synthetic mode:
 
-The tool does not publish prices. The operator still decides what to use and applies prices outside this app.
+```powershell
+uv run python -m zeal.cli serve
+```
 
-## Synthetic mode
+Open `http://127.0.0.1:8000`.
 
-Synthetic mode shows seeded spreadsheet-baseline recommendations. These are demo recommendations generated from the validated legacy spreadsheet fixture so the operator can review layout, labels, drill-downs, and formulas before live eBay access is approved.
+Confirm the top banner says synthetic baseline mode and that live eBay sold
+listings are not connected yet. Confirm the page says the project is awaiting
+production Marketplace Insights access.
 
-Refresh is disabled in synthetic mode. That keeps the seeded baseline from being replaced by empty "No Data" rows from a synthetic client that has no real sold listings.
+## What To Say Up Front
 
-## What live eBay mode will add
+The dashboard is read-only v1. It does not publish prices, track accept/override
+decisions, edit merchant config, export CSVs, blend CardCash into
+recommendations, or expose an `ebay_weight` control.
 
-Live eBay mode will use the eBay Marketplace Insights API to collect sold listings, filter them, compute the eBay sell percentage, score confidence, and append a new recommendation row for each active merchant during an on-demand refresh.
+Synthetic baseline mode uses seeded spreadsheet-baseline recommendations. These
+rows are useful for reviewing layout, labels, formula explanations, and drill-down
+flow. They are not current live market prices.
 
-After credentials are approved, the refresh button will run the live pipeline and the dashboard will show recent valid and excluded eBay observations on merchant detail pages.
+Live validation should wait until eBay enables `buy.marketplace.insights` for
+the production keyset. Browse API fallback is not allowed because Browse does not
+provide sold listings.
 
-## Reading the pricing list
+## Pricing List Walkthrough
 
-Start with the status strip:
+Start at the status strip and ask:
 
-- Active merchants: active merchant rows in the dashboard.
-- Mode: Synthetic or Live eBay.
-- Last completed refresh: most recent completed or partial run.
-- With recommendation: merchants whose latest row has usable recommendation values.
-- With No Data: merchants whose latest row could not produce a data-backed recommendation.
-- With live eBay observations: active merchants with at least one valid sold-listing observation stored.
+- Does the mode/status banner make it clear that live market data is not current?
+- Are "Synthetic baseline" and "Awaiting production Marketplace Insights access"
+  clear enough?
+- Are the active merchant, No Data, recommendation, and live observation counts
+  useful?
 
-Then scan the table:
+Scan the table and ask:
 
-- eBay sell is the market input from sold listings, or "No eBay data" when unavailable.
-- Online sell is the recommended storefront sell percentage.
-- In-mail, in-store, and electronic buy are customer payout recommendations by channel.
-- "Not offered" means the channel is ineligible for that merchant.
-- Source shows whether the latest row came from the synthetic baseline, live eBay, a manual override, or a No Data state.
-- Rows with No Data or manual overrides get a subtle visual tint so they are easier to spot while scanning.
-- Delta columns need at least two comparable runs. "No change" means a comparable value exists and did not move.
-- Confidence "No eBay data" means no valid eBay signal was available for that row.
+- Which columns do you look at first when deciding what to review?
+- Is the row spacing compact enough without feeling cramped?
+- Are percentages easy to compare when scanning across a row?
+- Are source badges clear: Synthetic baseline, Live eBay, No Data, Manual
+  override?
+- Are "No Data" and "Not offered" visibly and conceptually distinct?
+- Do confidence badges help, or would different wording be more useful?
+- Do the delta columns explain that they need at least two comparable runs?
+- Does any label sound too technical for day-to-day use?
 
-## Reading merchant detail
+Click a normal high-volume merchant such as Home Depot.
 
-The merchant page starts with the latest recommendation cards and a compact source badge. The two most important cards are Online sell and In-mail buy, followed by the other channel values, eBay sell, and Confidence.
+## Merchant Detail Walkthrough
 
-The "Why this recommendation?" strip explains the source in one sentence, repeats confidence, and shows when the latest row was computed. Use it to confirm whether the recommendation is Synthetic baseline, Manual override, Live eBay, or No Data before reading the full formula.
+On the detail page, start with the recommendation cards and ask:
 
-Formula Breakdown shows the worked recommendation logic for each channel. Normal rows show percentage inputs, fees, margins, and the final value. Status rows explain why a channel is Not offered, No Data, or override-based. It is intentionally below the summary so the operator can scan first and audit second.
+- Are Online sell and In-mail buy prominent enough?
+- Are In-store buy, Electronic buy, eBay sell, and Confidence in the right place?
+- Can you quickly tell whether the row is synthetic, live eBay, No Data, or
+  override-based?
 
-Recent eBay Observations will show valid sold listings after live refresh is enabled. Excluded eBay Observations will show listings filtered out by the validity rules, with reasons such as suspected partial balance or wrong merchant match.
+Move to "Why this recommendation?" and ask:
 
-Competitor Reference is read-only v1 context. It does not feed the recommendation.
+- Is this easy to find?
+- Does it explain the recommendation source before you inspect formulas?
+- Does the synthetic-mode warning prevent accidental trust in old market data?
 
-Recommendation History shows prior recommendation rows so the operator can see movement over time.
+Review the formula breakdown and ask:
 
-## Formula breakdown
+- Are the labels understandable without developer context?
+- Do "eBay differential", "In-mail margin", "PayPal cost", "bad debt", and
+  "postage" match how you think about the pricing math?
+- Is the step-by-step breakdown useful, or would a shorter summary be better?
+- For ineligible channels, is "Not offered" the right wording?
 
-The v1 recommendation is eBay-only unless a merchant has a manual override. For a normal merchant:
+Review eBay observation sections and ask:
 
-- Online sell = eBay sell percentage minus the merchant's eBay differential.
-- In-mail buy = online sell minus in-mail margin, PayPal cost, bad debt, and postage.
-- In-store buy = online sell minus in-store margin, PayPal cost, postage, and in-store bad debt.
-- Electronic buy = in-mail buy minus the merchant's electronic markdown, unless an electronic override applies.
+- Is the pending/synthetic empty state honest enough while live access is blocked?
+- Once live data exists, which listing fields matter most for trust: title, sold
+  date, face value, sale price, sell percentage, exclusion reason?
+- Would excluded listings help you diagnose bad eBay matches?
 
-All percentages are stored and computed as fractions, then displayed as percentages.
+Review Competitor Reference and ask:
 
-## Confidence
+- Is it clear this panel is reference-only in v1?
+- Is it clear CardCash/competitor data does not feed the recommendation?
+- Which competitor fields are useful before any future blending work?
 
-Confidence summarizes the eBay signal:
+Review Recommendation History and ask:
 
-- High: at least 10 valid recent listings, with the newest listing within 30 days.
-- Medium: enough usable listings or moderately fresh data.
-- Low: very small but still usable eBay sample.
-- No eBay data: no valid sold-listing signal for the merchant.
+- Does the history table help you understand movement?
+- Would you use this during a normal pricing review?
 
-Low confidence does not block a recommendation. It tells the operator to review more carefully.
+## Edge-State Checks
 
-## What v1 does not do
+Open at least one merchant with each state, if present in the seeded data:
 
-V1 does not auto-publish prices, track accept/override/skip decisions, edit merchant config in the app, run scheduled refreshes, export CSVs, blend competitor data into recommendations, expose an eBay-weight control, or use internal sale history.
+- Synthetic baseline
+- Manual override
+- No Data
+- Not offered channel
 
-## Things to ask the operator during demo
+For each one, ask whether the state is obvious before reading the formula.
 
-- Which columns help you decide what to review first?
-- Can you tell quickly which rows need attention?
-- Are any labels unclear or too technical?
-- Does the merchant detail page explain a recommendation quickly enough?
-- Are the No Data and Not offered states distinct enough?
-- Which eBay observation or excluded-listing details would help you trust the data?
-- What would you want to see before applying a recommended price outside the tool?
+## Success Criteria
+
+The synthetic-mode review is successful when:
+
+- The operator understands that live eBay sold listings are not connected yet.
+- The operator can scan the list and identify rows worth drilling into.
+- Source, confidence, No Data, Not offered, and manual override labels are clear.
+- Merchant detail pages explain the recommendation source and formula clearly.
+- eBay observation empty states do not imply live data exists.
+- Competitor Reference is understood as reference-only and not part of v1
+  recommendations.
+- The operator can describe how he would use the dashboard in his actual review
+  workflow.
+
+## Turning Findings Into PRs
+
+Convert findings into small PRs:
+
+- Keep each PR to one usability theme, such as table labels, detail-page copy, or
+  observation table readability.
+- Do not change formulas, schema, live eBay client behavior, smoke-test logic, or
+  credential handling as part of UI feedback.
+- Keep competitor data reference-only and keep v1 read-only.
+- Use synthetic-mode tests for template/context behavior.
+- Save live-data concerns for credential-day validation after Marketplace
+  Insights production entitlement is enabled.

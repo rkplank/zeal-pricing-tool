@@ -15,20 +15,30 @@ Authoritative design docs live in `docs/`:
 
 Read the relevant section before making any non-trivial change. The spec is the source of truth: if code disagrees with the spec, the code is wrong unless explicitly told otherwise.
 
-## Current phase
+## Current phase and status
 
-Phase 1 (foundation). Goal: pricing engine works in isolation, fully tested, with golden tests against every spreadsheet merchant. No web app, no eBay integration, no scheduling yet.
+Current status as of 2026-05-08, latest verified commit
+`3034e1538774714d0b52ca6c70fbb6004704f25f`
+(`harden marketplace insights readiness`):
 
-Phase 1 deliverables:
-- Repo scaffold (pyproject.toml, ruff config, .gitignore)
-- SQLite schema and migrations
-- Pydantic models
-- Pure-function pricing engine + eBay averaging + confidence scoring
-- Baseline extraction script (produces `tests/fixtures/spreadsheet_baseline.json`)
-- Spreadsheet seeder script (populates `merchants` and `global_constants`)
-- Golden test suite (every spreadsheet merchant matches engine output to ±0.001)
+- Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
+  seeded baseline data, and golden tests validate spreadsheet-faithful behavior
+  within +/-0.001.
+- The FastAPI read-only dashboard is implemented with seeded/synthetic
+  recommendations, pricing list, merchant detail pages, formula breakdowns,
+  refresh controls, and status display.
+- The live eBay Marketplace Insights path exists behind configuration:
+  live/synthetic client factory, OAuth flow, Marketplace Insights client,
+  `zeal smoke-ebay`, refresh orchestrator, and mocked tests.
+- Production validation is blocked. The production eBay keyset cannot mint
+  `buy.marketplace.insights`; eBay has not yet responded with production
+  Marketplace Insights entitlement.
+- Current productive work is synthetic-mode dashboard usability polish and
+  documentation alignment while waiting for eBay.
 
-Anything outside Phase 1 — web routes, eBay client, refresh orchestrator, scheduler, dashboard, deployment scripts — is not in scope yet. Don't write it speculatively.
+Do not run live eBay validation until production `buy.marketplace.insights` is
+enabled. Do not fall back to Browse API; Browse does not provide sold-listing
+data and is not an acceptable substitute for Marketplace Insights.
 
 ## Working principles
 
@@ -84,14 +94,23 @@ Cross-layer imports flow inward: `web` and `ingestion` may import from `pricing`
 - All percentages stored as `REAL` in `[0, 1]`. All timestamps as ISO 8601 UTC text.
 - Merchants are deactivated (`is_active = 0`), never deleted. Same for global constants — history matters.
 
-## What not to do in Phase 1
+## What not to do in v1 without explicit scope change
 
-- Don't pull live eBay data. The eBay client is Phase 2.
-- Don't write a FastAPI route, template, or HTMX handler. Web is Phase 3.
-- Don't implement: bankruptcy detection, recency weighting, outlier removal, competitor scraping, dynamic tier reassignment, override-driven learning, auto-publishing. All v2.
-- Don't add authentication, a `users` table, or anything multi-user.
-- Don't generate placeholder or mock data unless explicitly asked.
-- Don't add a logging/telemetry framework. Standard library `logging` is enough until proven otherwise.
+- Do not change pricing formulas, sentinels, confidence rules, or golden
+  tolerance.
+- Do not change the SQLite schema or add migrations unless the task explicitly
+  requires it.
+- Do not run live eBay validation while production Marketplace Insights
+  entitlement is blocked.
+- Do not use Browse API fallback for sold listings.
+- Do not put real eBay credentials in code, tests, fixtures, docs, or commit
+  history.
+- Do not add automated publishing, accept/override/skip workflow, scheduled
+  refresh, CSV export, in-app config editing, multi-user auth, `ebay_weight` UI,
+  CardCash blending, risk/watchlist fields, website integration, or internal
+  sale-history inputs.
+- Do not add a logging/telemetry framework. Standard library `logging` is enough
+  until proven otherwise.
 
 ## When you hit something unclear
 

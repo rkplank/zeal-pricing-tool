@@ -3,7 +3,7 @@
   {% for channel, steps in merchant.latest.formula_breakdown.items() %}
   <div class="breakdown-channel">
     <h3>{{ channel|channel }}</h3>
-    <p class="breakdown-caption">Calculation steps for this channel.</p>
+    <p class="breakdown-caption">Inputs, costs, and margins used for this channel.</p>
     <ol>
       {% for step in steps %}
       {% if step.label is status_step %}

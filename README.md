@@ -19,9 +19,17 @@ The current codebase proves that the March 2022 spreadsheet logic ports
 faithfully. The engine matches the spreadsheet baseline within +/-0.001 across
 all 281 baseline merchants.
 
-The dashboard now supports read-only review and on-demand refresh. It remains
-synthetic-by-default for local development, and can use the live eBay
-Marketplace Insights API once credentials are configured.
+The dashboard now supports read-only review, synthetic-mode usability review,
+and the live eBay smoke/refresh path. Production validation is currently blocked
+because the production eBay keyset cannot mint the `buy.marketplace.insights`
+scope. eBay has not yet responded with production Marketplace Insights
+entitlement.
+
+Synthetic mode is the correct current workstream: use it to review table
+scannability, labels, merchant detail pages, formula explanations, and operator
+workflow before live sold-listing access is available. Synthetic baseline rows
+come from the validated spreadsheet fixture; they are not current live market
+prices.
 
 CardCash competitor data remains reference-only/post-feedback. Do not assume
 automated publishing, scheduled refresh, operator workflow, or deployment
@@ -29,7 +37,7 @@ scripts are present.
 
 ## Credential-Day Procedure
 
-1. Wait for eBay developer-program approval; confirm access is Marketplace Insights, not Browse-only.
+1. Wait for eBay to enable production Marketplace Insights entitlement. Confirm `buy.marketplace.insights` is available for the production Client Credential Grant Type scopes; Browse API fallback is not allowed.
 2. Copy `.env.example` to `.env`; fill `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`; set `ZEAL_EBAY_MODE=live`; confirm `EBAY_ENVIRONMENT`.
 3. Run `uv run python -m zeal.cli smoke-ebay --merchant home_depot` or another known merchant.
 4. Verify listing titles match the merchant, sale prices are non-zero, sold dates are recent, and post-filter valid count is non-zero.

@@ -27,11 +27,14 @@ def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     assert "Pricing List" in response.text
     assert "Home Depot" in response.text
     assert "Mode: Synthetic" in response.text
-    assert "Refresh is disabled until live eBay credentials are approved" in (
+    assert "Synthetic baseline mode — live eBay sold listings are not connected yet." in (
         response.text
     )
+    assert "Awaiting production Marketplace Insights access" in response.text
+    assert "do not mean live market prices are current" in response.text
     assert "Synthetic baseline" in response.text
     assert "row-synthetic" in response.text
+    assert "numeric-cell" in response.text
     assert "row-manual-override" in response.text
     assert "recommendation-cell" in response.text
     assert "Delta columns populate after two or more refreshes." in response.text
@@ -46,20 +49,25 @@ def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
     response = client.get("/merchant/home_depot")
 
     assert response.status_code == 200
-    assert "Formula Breakdown" in response.text
+    assert "Why this recommendation?" in response.text
     assert "No CardCash data yet" in response.text
     assert "Mode: Synthetic" in response.text
-    assert (
-        "No live eBay observations yet. Current recommendations are seeded from the "
-        "spreadsheet baseline. Live observations will appear after a successful eBay refresh."
-    ) in response.text
+    assert "Synthetic baseline mode — live eBay sold listings are not connected yet." in (
+        response.text
+    )
+    assert "Awaiting production Marketplace Insights access" in response.text
     assert "Synthetic baseline" in response.text
     assert "Why this recommendation?" in response.text
     expected_summary = (
-        "Seeded spreadsheet-baseline values are displayed until live eBay refresh is enabled."
+        "Seeded spreadsheet-baseline values are displayed while production "
+        "Marketplace Insights access is blocked."
     )
     assert expected_summary in response.text
-    assert "Calculation steps for this channel." in response.text
+    assert "Inputs, costs, and margins used for this channel." in response.text
+    assert "Synthetic baseline mode has no live sold listings" in response.text
+    assert "Reference-only in v1. Competitor data is not used in recommendations." in (
+        response.text
+    )
 
 
 def test_merchant_detail_manual_override_summary(tmp_path: Path) -> None:
@@ -120,7 +128,7 @@ def test_live_mode_shows_live_badge_without_synthetic_banner(
     assert response.status_code == 200
     assert "Mode: Live eBay" in response.text
     assert "Synthetic baseline" in response.text
-    assert "Refresh is disabled until live eBay credentials are approved" not in (
+    assert "Synthetic baseline mode — live eBay sold listings are not connected yet." not in (
         response.text
     )
 

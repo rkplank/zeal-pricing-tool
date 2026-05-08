@@ -31,7 +31,8 @@
 
 {% if is_synthetic_mode %}
 <div class="mode-banner">
-  Viewing seeded baseline recommendations. Refresh is disabled until live eBay credentials are approved so demo data stays intact.
+  <strong>Synthetic baseline mode — live eBay sold listings are not connected yet.</strong>
+  <span>Awaiting production Marketplace Insights access. Seeded spreadsheet-baseline recommendations are for UI review and do not mean live market prices are current.</span>
 </div>
 {% endif %}
 
@@ -52,14 +53,14 @@
       <tr>
         <th>Merchant</th>
         <th>Tier</th>
-        <th>eBay sell</th>
-        <th>Online sell</th>
-        <th>In-mail buy</th>
-        <th>In-store buy</th>
-        <th>Electronic buy</th>
+        <th class="numeric-cell">eBay sell</th>
+        <th class="numeric-cell">Online sell</th>
+        <th class="numeric-cell">In-mail buy</th>
+        <th class="numeric-cell">In-store buy</th>
+        <th class="numeric-cell">Electronic buy</th>
         <th>Source</th>
-        <th>Delta last run</th>
-        <th>Max abs delta N=5</th>
+        <th class="numeric-cell">Delta last run</th>
+        <th class="numeric-cell">Max abs delta N=5</th>
         <th>eBay confidence</th>
         <th>Last refresh</th>
       </tr>
@@ -70,11 +71,11 @@
         <td class="merchant-cell"><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
         <td class="quiet-cell">{{ row.tier }}</td>
         {% if row.latest %}
-        <td class="quiet-cell">{{ row.latest.ebay_sell_pct|pct("No eBay data") }}</td>
-        <td class="recommendation-cell">{{ row.latest.online_sell|pct }}</td>
-        <td class="recommendation-cell">{% if not row.latest.config_snapshot.in_mail_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.in_mail_buy|pct }}{% endif %}</td>
-        <td class="recommendation-cell">{% if not row.latest.config_snapshot.in_store_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.in_store_buy|pct }}{% endif %}</td>
-        <td class="recommendation-cell">{% if not row.latest.config_snapshot.electronic_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.electronic_buy|pct }}{% endif %}</td>
+        <td class="quiet-cell numeric-cell">{{ row.latest.ebay_sell_pct|pct("No eBay data") }}</td>
+        <td class="recommendation-cell numeric-cell">{{ row.latest.online_sell|pct }}</td>
+        <td class="recommendation-cell numeric-cell">{% if not row.latest.config_snapshot.in_mail_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.in_mail_buy|pct }}{% endif %}</td>
+        <td class="recommendation-cell numeric-cell">{% if not row.latest.config_snapshot.in_store_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.in_store_buy|pct }}{% endif %}</td>
+        <td class="recommendation-cell numeric-cell">{% if not row.latest.config_snapshot.electronic_eligible %}<span class="muted-label">Not offered</span>{% else %}{{ row.latest.electronic_buy|pct }}{% endif %}</td>
         <td>
           {% if row.latest.no_data %}
           <span class="badge badge-warning">No Data</span>
@@ -86,7 +87,7 @@
           <span class="badge badge-live">Live eBay</span>
           {% endif %}
         </td>
-        <td class="movement-cell">
+        <td class="movement-cell numeric-cell">
           {% if row.delta_last_run is none %}
           Needs 2 runs
           {% elif row.delta_last_run == 0 %}
@@ -96,7 +97,7 @@
           {% if row.delta_last_run_channel %}<span>{{ row.delta_last_run_channel|channel }}</span>{% endif %}
           {% endif %}
         </td>
-        <td class="movement-cell">
+        <td class="movement-cell numeric-cell">
           {% if row.max_abs_delta_over_n is none %}
           Needs 2 runs
           {% elif row.max_abs_delta_over_n == 0 %}

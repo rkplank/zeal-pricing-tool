@@ -278,3 +278,15 @@ Competitor data is reference-only in v1 — displayed on the merchant detail pag
 **Alternatives:** (a) block all eBay-related development until access is confirmed — rejected because Phase 1 and Phase 2 work is API-independent; (b) proceed assuming Browse API works — rejected because it demonstrably does not expose sold-listing data; (c) proceed as above.
 
 **Rationale:** documenting this now prevents the Phase 3 build from starting under incorrect assumptions about which API to integrate against. Marketplace Insights is the correct target; Browse is the wrong target.
+
+---
+
+## 2026-05-08 — Continue synthetic-mode usability work while Marketplace Insights is blocked
+
+**Status:** eBay has not yet responded. Production Marketplace Insights entitlement remains blocked because the production keyset cannot mint `buy.marketplace.insights`.
+
+**Decision:** Continue dashboard UI/usability review and documentation alignment in synthetic mode. Do not run production live validation, do not use Browse API fallback, and do not change the pricing algorithm, schema, live eBay client behavior, or credential-day smoke-test logic while waiting.
+
+**Alternatives:** (a) keep waiting without further work; (b) attempt a Browse API workaround; (c) proceed with synthetic-mode usability review.
+
+**Rationale:** synthetic mode already provides seeded baseline recommendations that are sufficient for reviewing table scannability, labels, detail-page comprehension, formula explanations, and operator workflow. Browse API cannot supply sold listings and would produce the wrong market signal. Live data quality work belongs on credential day after production Marketplace Insights entitlement is enabled.

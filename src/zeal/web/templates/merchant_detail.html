@@ -3,6 +3,13 @@
 {% block content %}
 <nav class="crumb"><a href="/">Pricing List</a> / {{ merchant.display_name }}</nav>
 
+{% if is_synthetic_mode %}
+<div class="mode-banner">
+  <strong>Synthetic baseline mode — live eBay sold listings are not connected yet.</strong>
+  <span>Awaiting production Marketplace Insights access. Use this page to review layout, labels, and formulas, not current live market movement.</span>
+</div>
+{% endif %}
+
 <section class="section-head">
   <div>
     <h1>{{ merchant.display_name }}</h1>
@@ -41,7 +48,7 @@
     {% elif merchant.latest.config_snapshot.online_sell_override is not none or merchant.latest.config_snapshot.electronic_buy_override is not none %}
     <strong>A manual override in the seeded merchant config sets at least one channel.</strong>
     {% elif is_synthetic_mode or not merchant.has_live_ebay_observations %}
-    <strong>Seeded spreadsheet-baseline values are displayed until live eBay refresh is enabled.</strong>
+    <strong>Seeded spreadsheet-baseline values are displayed while production Marketplace Insights access is blocked.</strong>
     {% else %}
     <strong>Live eBay sold listings produced this recommendation.</strong>
     {% endif %}
@@ -57,7 +64,7 @@
 </section>
 
 <section class="panel panel-secondary">
-  <h2>Formula Breakdown</h2>
+  <h2>Why this recommendation?</h2>
   {% include "partials/breakdown.html" %}
 </section>
 {% else %}
@@ -82,7 +89,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="empty">No live eBay observations yet. Current recommendations are seeded from the spreadsheet baseline. Live observations will appear after a successful eBay refresh.</p>
+  <p class="empty">Awaiting production Marketplace Insights access. Synthetic baseline mode has no live sold listings, so this section is intentionally empty until a successful live eBay refresh.</p>
   {% endif %}
 </section>
 
@@ -103,12 +110,13 @@
     </tbody>
   </table>
   {% else %}
-  <p class="empty">No excluded eBay observations yet. These will appear after live eBay refresh is enabled.</p>
+  <p class="empty">Awaiting production Marketplace Insights access. Excluded sold listings will appear here only after live eBay refresh can run.</p>
   {% endif %}
 </section>
 
 <section class="panel">
   <h2>Competitor Reference</h2>
+  <p class="panel-note">Reference-only in v1. Competitor data is not used in recommendations.</p>
   {% include "partials/competitor_panel.html" %}
 </section>
 
