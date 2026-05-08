@@ -76,7 +76,7 @@
         <td>{{ obs.title }}</td>
         <td>{{ obs.face_value }}</td>
         <td>{{ obs.sale_price }}</td>
-        <td>{{ obs.sell_pct|pct }}</td>
+        <td>{{ obs.sell_pct|pct("n/a") }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -96,7 +96,7 @@
       <tr>
         <td>{{ obs.sold_at|datetime }}</td>
         <td>{{ obs.title }}</td>
-        <td>{{ obs.sell_pct|pct }}</td>
+        <td>{{ obs.sell_pct|pct("n/a") }}</td>
         <td>{{ obs.exclusion_reason or "No exclusion reason" }}</td>
       </tr>
       {% endfor %}

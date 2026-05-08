@@ -54,7 +54,7 @@ class EbayObservationRow:
     sold_at: str
     face_value: float
     sale_price: float
-    sell_pct: float
+    sell_pct: float | None
     validity_status: str
     exclusion_reason: str | None
 
@@ -337,7 +337,7 @@ def _fetch_ebay_observations(
             sold_at=str(row["sold_at"]),
             face_value=float(row["face_value"]),
             sale_price=float(row["sale_price"]),
-            sell_pct=float(row["sale_price"]) / float(row["face_value"]),
+            sell_pct=_safe_sell_pct(row["sale_price"], row["face_value"]),
             validity_status=str(row["validity_status"]),
             exclusion_reason=(
                 str(row["exclusion_reason"]) if row["exclusion_reason"] is not None else None
@@ -345,6 +345,13 @@ def _fetch_ebay_observations(
         )
         for row in records
     ]
+
+
+def _safe_sell_pct(sale_price: Any, face_value: Any) -> float | None:
+    face = float(face_value)
+    if face <= 0:
+        return None
+    return float(sale_price) / face
 
 
 def _fetch_competitor_observations(

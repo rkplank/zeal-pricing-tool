@@ -16,6 +16,7 @@ from zeal.ingestion.ebay_errors import (
 )
 from zeal.ingestion.ebay_marketplace_insights_client import (
     EbayMarketplaceInsightsClient,
+    _query_from_regex,
     extract_face_value,
 )
 from zeal.models.ebay import EbaySoldListing
@@ -32,13 +33,14 @@ def _item(
     title: str = "Target gift card $100",
     price: str = "90.00",
     sold_at: str = "2025-05-01T10:00:00.000Z",
+    **extra: Any,
 ) -> dict[str, Any]:
     return {
         "itemId": listing_id,
         "title": title,
         "lastSoldPrice": {"value": price, "currency": "USD"},
         "lastSoldDate": sold_at,
-    }
+    } | extra
 
 
 def _page(items: list[dict[str, Any]], next_url: str | None = None) -> dict[str, Any]:
@@ -121,6 +123,59 @@ async def test_successful_query_returns_parsed_listings() -> None:
     assert listing.sale_price == 90.0
     assert listing.face_value == 100.0
     assert listing.sold_at == "2025-05-01T10:00:00.000Z"
+
+
+@pytest.mark.asyncio
+async def test_parser_keeps_raw_payload_and_safe_source_url() -> None:
+    with respx.mock:
+        respx.get(_SEARCH_URL).mock(
+            return_value=httpx.Response(
+                200,
+                json=_page(
+                    [
+                        _item(
+                            "id-1",
+                            itemWebUrl="https://www.ebay.com/itm/id-1",
+                        )
+                    ]
+                ),
+            )
+        )
+        async with httpx.AsyncClient() as http:
+            client, _ = _make_client(http)
+            result = await _fetch(client)
+
+    listing = result[0]
+    assert listing.source_url == "https://www.ebay.com/itm/id-1"
+    assert listing.raw_payload is not None
+    assert '"itemId": "id-1"' in listing.raw_payload
+    assert '"title": "Target gift card $100"' in listing.raw_payload
+
+
+@pytest.mark.asyncio
+async def test_parser_does_not_invent_undocumented_shipping_price() -> None:
+    with respx.mock:
+        respx.get(_SEARCH_URL).mock(
+            return_value=httpx.Response(
+                200,
+                json=_page(
+                    [
+                        _item(
+                            "id-1",
+                            price="90.00",
+                            shippingOptions=[
+                                {"shippingCost": {"value": "4.99", "currency": "USD"}}
+                            ],
+                        )
+                    ]
+                ),
+            )
+        )
+        async with httpx.AsyncClient() as http:
+            client, _ = _make_client(http)
+            result = await _fetch(client)
+
+    assert result[0].sale_price == 90.0
 
 
 @pytest.mark.asyncio
@@ -412,3 +467,19 @@ def test_face_value_takes_maximum_when_multiple_amounts() -> None:
 
 def test_face_value_four_digit_amount() -> None:
     assert extract_face_value("Macy's $1000 gift card") == 1000.0
+
+
+def test_query_from_regex_preserves_home_depot_separator() -> None:
+    assert _query_from_regex("home.*depot") == "home depot gift card"
+
+
+def test_query_from_regex_keeps_grouped_merchant_terms_separate() -> None:
+    query = _query_from_regex("tj.*maxx.*/.*homegoods.*/.*marshalls")
+
+    assert query == "tj maxx homegoods marshalls gift card"
+    assert "tjmaxx" not in query
+    assert "homegoodsmarshalls" not in query
+
+
+def test_query_from_regex_single_word() -> None:
+    assert _query_from_regex("target") == "target gift card"

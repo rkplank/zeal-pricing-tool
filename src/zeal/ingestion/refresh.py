@@ -208,10 +208,20 @@ def _persist_observations(
         validity_status = "excluded" if listing.listing_id in excluded_map else "valid"
         db.execute(
             """
-            INSERT OR IGNORE INTO ebay_observations
+            INSERT INTO ebay_observations
                 (merchant_id, listing_id, sold_at, face_value, sale_price,
                  title, validity_status, exclusion_reason, raw_payload)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(listing_id) DO UPDATE SET
+                merchant_id = excluded.merchant_id,
+                sold_at = excluded.sold_at,
+                face_value = excluded.face_value,
+                sale_price = excluded.sale_price,
+                title = excluded.title,
+                validity_status = excluded.validity_status,
+                exclusion_reason = excluded.exclusion_reason,
+                raw_payload = excluded.raw_payload,
+                fetched_at = datetime('now')
             """,
             (
                 merchant_id,

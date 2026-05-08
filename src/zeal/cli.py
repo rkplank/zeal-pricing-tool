@@ -52,6 +52,7 @@ def cmd_smoke_ebay(args: argparse.Namespace) -> None:
 
 
 async def _run_smoke_ebay(merchant_id: str, limit: int) -> int:
+    fetch_limit = max(1, limit)
     try:
         config = ZealConfig.from_env()
     except ValueError as exc:
@@ -68,7 +69,11 @@ async def _run_smoke_ebay(merchant_id: str, limit: int) -> int:
 
     http_client = httpx.AsyncClient()
     try:
-        client = create_ebay_client(config=config, http_client=http_client)
+        client = create_ebay_client(
+            config=config,
+            http_client=http_client,
+            max_results_default=fetch_limit,
+        )
         listings = await client.sold_listings_for_merchant(
             merchant_id=merchant.merchant_id,
             inclusion_regex=merchant.inclusion_regex,
@@ -87,7 +92,7 @@ async def _run_smoke_ebay(merchant_id: str, limit: int) -> int:
     print(f"Inclusion regex: {merchant.inclusion_regex}")
     print(f"Raw listings returned: {len(listings)}")
     print("First listings:")
-    for listing in listings[: min(3, limit)]:
+    for listing in listings[: min(3, fetch_limit)]:
         print(
             "- "
             f"{listing.listing_id} | {listing.title} | "

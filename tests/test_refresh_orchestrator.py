@@ -72,6 +72,7 @@ def _make_listing(
         face_value=face_value,
         sale_price=sale_price,
         title=f"{merchant_id} gift card",
+        raw_payload=f'{{"itemId": "{listing_id}"}}',
     )
 
 
@@ -280,6 +281,63 @@ async def test_multiple_refreshes_append_only() -> None:
     # Two recommendations (one per run), one observation (deduped by listing_id).
     assert conn.execute("SELECT COUNT(*) FROM price_recommendations").fetchone()[0] == 2
     assert conn.execute("SELECT COUNT(*) FROM ebay_observations").fetchone()[0] == 1
+    raw_payload = conn.execute(
+        "SELECT raw_payload FROM ebay_observations WHERE listing_id = 'lid-shared'"
+    ).fetchone()["raw_payload"]
+    assert raw_payload == '{"itemId": "lid-shared"}'
+
+
+@pytest.mark.asyncio
+async def test_repeated_listing_updates_validity_status() -> None:
+    conn = _make_db()
+    _seed_merchant(conn, "target", "Target")
+
+    class _ChangingClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def sold_listings_for_merchant(
+            self,
+            *,
+            merchant_id: str,
+            inclusion_regex: str,
+            exclusion_regex: str | None,
+        ) -> Sequence[EbaySoldListing]:
+            _ = (inclusion_regex, exclusion_regex)
+            self.calls += 1
+            if self.calls == 1:
+                return [
+                    _make_listing(
+                        merchant_id,
+                        listing_id="lid-shared",
+                        face_value=0.0,
+                        sale_price=85.0,
+                    )
+                ]
+            return [
+                _make_listing(
+                    merchant_id,
+                    listing_id="lid-shared",
+                    face_value=100.0,
+                    sale_price=85.0,
+                )
+            ]
+
+    client = _ChangingClient()
+
+    await _run(conn, client)
+    first = conn.execute(
+        "SELECT validity_status, exclusion_reason FROM ebay_observations"
+    ).fetchone()
+    assert first["validity_status"] == "excluded"
+    assert first["exclusion_reason"] == "zero_or_negative_face_value"
+
+    await _run(conn, client)
+    second = conn.execute(
+        "SELECT validity_status, exclusion_reason FROM ebay_observations"
+    ).fetchone()
+    assert second["validity_status"] == "valid"
+    assert second["exclusion_reason"] is None
 
 
 # ---------------------------------------------------------------------------

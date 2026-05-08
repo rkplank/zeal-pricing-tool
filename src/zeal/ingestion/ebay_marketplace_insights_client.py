@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import urllib.parse
 from collections.abc import Sequence
@@ -27,7 +28,8 @@ _BASE_URLS: dict[str, str] = {
 _SEARCH_PATH = "/buy/marketplace_insights/v1_beta/item_sales/search"
 _MARKETPLACE_ID = "EBAY_US"
 _LOOKBACK_DAYS = 90
-_REGEX_META = re.compile(r'[\\^$.|?*+()\[\]{}]')
+_REGEX_SEPARATOR = re.compile(r"(?:\\s\+|\\s\*|\\s|/\s*|\s*/|[|]+|[.*+?{}\[\]()\\^$-]+)")
+_QUERY_SPACE = re.compile(r"\s+")
 _FACE_VALUE_RE = re.compile(r'\$(\d{1,5}(?:\.\d{1,2})?)\b')
 
 
@@ -50,22 +52,38 @@ def extract_face_value(title: str) -> float:
 def _query_from_regex(inclusion_regex: str) -> str:
     """Convert a per-merchant inclusion regex to a plain-text eBay search query.
 
-    Strips regex metacharacters; for the overwhelming majority of merchants the
-    inclusion_regex is the merchant display name or a simple substring of it.
+    Regex separators become spaces so grouped and multi-word merchants do not
+    collapse into one keyword, e.g. ``home.*depot`` -> ``home depot``.
     """
-    plain = _REGEX_META.sub("", inclusion_regex).strip()
+    plain = _REGEX_SEPARATOR.sub(" ", inclusion_regex)
+    plain = _QUERY_SPACE.sub(" ", plain).strip()
     return f"{plain} gift card"
 
 
 def _parse_item(item: dict[str, Any]) -> EbaySoldListing:
     title = str(item.get("title", ""))
+    # Marketplace Insights ItemSales documents lastSoldPrice and itemWebUrl,
+    # but not a shipping-cost field. Do not infer Browse-style shippingOptions
+    # into this sold-listing price unless eBay documents it for ItemSales.
+    sale_price = float(item["lastSoldPrice"]["value"])
     return EbaySoldListing(
         listing_id=str(item["itemId"]),
         title=title,
-        sale_price=float(item["lastSoldPrice"]["value"]),
+        sale_price=sale_price,
         sold_at=str(item["lastSoldDate"]),
         face_value=extract_face_value(title),
+        source_url=_safe_url(item.get("itemWebUrl") or item.get("itemAffiliateWebUrl")),
+        raw_payload=json.dumps(item, sort_keys=True),
     )
+
+
+def _safe_url(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    parsed = urllib.parse.urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    return value
 
 
 class EbayMarketplaceInsightsClient:

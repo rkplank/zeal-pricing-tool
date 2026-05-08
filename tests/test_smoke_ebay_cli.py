@@ -102,6 +102,45 @@ def test_ebay_client_error_prints_clean_error(
     assert "EbayAuthError: bad credentials" in capsys.readouterr().out
 
 
+def test_limit_is_passed_to_live_client_factory(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class _EmptyClient:
+        async def sold_listings_for_merchant(
+            self,
+            *,
+            merchant_id: str,
+            inclusion_regex: str,
+            exclusion_regex: str | None,
+        ) -> Sequence[EbaySoldListing]:
+            return []
+
+    seen: dict[str, int | None] = {}
+
+    def _factory(**kwargs: object) -> _EmptyClient:
+        seen["max_results_default"] = kwargs["max_results_default"]  # type: ignore[assignment]
+        return _EmptyClient()
+
+    _clear_env(monkeypatch)
+    monkeypatch.setenv("ZEAL_EBAY_MODE", "live")
+    monkeypatch.setenv("EBAY_CLIENT_ID", "fake-client-id")
+    monkeypatch.setenv("EBAY_CLIENT_SECRET", "fake-client-secret")
+    monkeypatch.setenv("ZEAL_DB_PATH", str(_seeded_db(tmp_path)))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["zeal", "smoke-ebay", "--merchant", "home_depot", "--limit", "7"],
+    )
+    monkeypatch.setattr(cli, "create_ebay_client", _factory)
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main()
+
+    assert excinfo.value.code == 0
+    assert seen["max_results_default"] == 7
+
+
 def test_invalid_scope_guidance_prints_clean_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

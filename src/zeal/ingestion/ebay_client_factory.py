@@ -8,7 +8,12 @@ from zeal.ingestion.ebay_marketplace_insights_client import EbayMarketplaceInsig
 from zeal.ingestion.ebay_oauth import EbayTokenManager
 
 
-def create_ebay_client(*, config: ZealConfig, http_client: httpx.AsyncClient) -> EbayClient:
+def create_ebay_client(
+    *,
+    config: ZealConfig,
+    http_client: httpx.AsyncClient,
+    max_results_default: int | None = None,
+) -> EbayClient:
     if config.ebay_mode == "synthetic":
         return SyntheticEbayClient()
 
@@ -25,4 +30,5 @@ def create_ebay_client(*, config: ZealConfig, http_client: httpx.AsyncClient) ->
         token_manager=token_manager,
         environment=config.ebay_environment,
         http_client=http_client,
+        **({"max_results_default": max_results_default} if max_results_default is not None else {}),
     )

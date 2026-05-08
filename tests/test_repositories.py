@@ -98,3 +98,26 @@ def test_detail_query_returns_latest_recommendation_and_history() -> None:
     assert detail.latest is not None
     assert detail.history
     assert detail.recent_refreshes
+
+
+def test_detail_query_handles_zero_face_value_excluded_observation() -> None:
+    conn = _conn()
+    seed_demo_data(conn, BASELINE_FIXTURE)
+    conn.execute(
+        """
+        INSERT INTO ebay_observations (
+            merchant_id, listing_id, sold_at, face_value, sale_price,
+            title, validity_status, exclusion_reason
+        ) VALUES (
+            'home_depot', 'zero-face', '2025-05-01T10:00:00', 0.0, 10.0,
+            'Home Depot gift card unknown value', 'excluded',
+            'zero_or_negative_face_value'
+        )
+        """
+    )
+    conn.commit()
+
+    detail = fetch_merchant_detail(conn, "home_depot")
+
+    assert detail is not None
+    assert detail.excluded_ebay_observations[0].sell_pct is None
