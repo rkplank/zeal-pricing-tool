@@ -23,9 +23,9 @@ Current status as of 2026-05-09, latest verified commit
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
   within +/-0.001.
-- The FastAPI read-only dashboard is implemented with seeded/synthetic
-  recommendations, pricing list, merchant detail pages, formula breakdowns,
-  refresh controls, and status display.
+- The FastAPI dashboard is implemented with seeded/synthetic recommendations,
+  pricing list, merchant detail pages, formula breakdowns, refresh controls,
+  status display, and narrow merchant config editing.
 - The live eBay Marketplace Insights path exists behind configuration:
   live/synthetic client factory, OAuth flow, Marketplace Insights client,
   `zeal smoke-ebay`, refresh orchestrator, and mocked tests.
@@ -34,8 +34,8 @@ Current status as of 2026-05-09, latest verified commit
   Marketplace Insights entitlement.
 - Synthetic dashboard polish and documentation alignment are complete while
   waiting for eBay.
-- Narrow one-merchant-at-a-time merchant config editing is now approved for v1
-  scope, but not implemented yet.
+- Narrow one-merchant-at-a-time merchant config editing is implemented for
+  formula/config inputs with history logging.
 
 Do not run live eBay validation until production `buy.marketplace.insights` is
 enabled. Do not fall back to Browse API; Browse does not provide sold-listing

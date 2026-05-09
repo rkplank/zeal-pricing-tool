@@ -28,7 +28,12 @@
       {% endif %}
     </p>
   </div>
+  <a class="button-link" href="/merchant/{{ merchant.merchant_id }}/config">Edit config</a>
 </section>
+
+{% if saved %}
+<div class="success-banner">Merchant config saved. Changes apply to future recommendations.</div>
+{% endif %}
 
 {% if merchant.latest %}
 <section class="metric-grid">

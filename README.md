@@ -19,9 +19,9 @@ The current codebase proves that the March 2022 spreadsheet logic ports
 faithfully. The engine matches the spreadsheet baseline within +/-0.001 across
 all 281 baseline merchants.
 
-The dashboard now supports review, synthetic-mode usability review, and the live
-eBay smoke/refresh path. A narrow merchant config editor is approved for v1
-scope but has not been built yet. Production validation is currently blocked
+The dashboard now supports review, narrow merchant config editing,
+synthetic-mode usability review, and the live eBay smoke/refresh path.
+Production validation is currently blocked
 because the production eBay keyset cannot mint the `buy.marketplace.insights`
 scope. eBay has not yet responded with production Marketplace Insights
 entitlement.
@@ -51,7 +51,7 @@ This tool is designed to be:
 
 - Local-first, single-operator, Windows-targeted
 - A review dashboard the operator runs on demand, with a narrow merchant config
-  editor in v1 scope
+  editor for formula/config inputs
 - An append-only historical record of every pricing recommendation produced
 - Spreadsheet-faithful in v1 (algorithm matches the legacy spreadsheet)
 - Forward-compatible with future website integration (the engine is a pure-function library importable by other consumers)

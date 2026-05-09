@@ -85,6 +85,14 @@ a:hover {
   color: #624a08;
 }
 
+.success-banner {
+  background: #eaf7f0;
+  border: 1px solid #bfe2cd;
+  color: var(--success);
+  margin-bottom: 12px;
+  padding: 10px 12px;
+}
+
 .status-strip {
   align-items: center;
   background: #ffffff;
@@ -267,6 +275,35 @@ tr:hover td {
   opacity: 0.65;
 }
 
+.button-link {
+  background: #f3f7fb;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: #243447;
+  display: inline-block;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 7px 10px;
+  text-decoration: none;
+}
+
+.button-link:hover {
+  background: #e8f1fb;
+  text-decoration: none;
+}
+
+.button-primary {
+  background: #145ea8;
+  border-color: #145ea8;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.button-primary:hover {
+  background: #0f4c88;
+}
+
 .crumb {
   color: var(--muted);
   margin-bottom: 12px;
@@ -394,4 +431,77 @@ tr:hover td {
 
 code {
   color: var(--muted);
+}
+
+.config-form {
+  max-width: 980px;
+}
+
+.form-section h2 {
+  margin-bottom: 8px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.form-grid-single {
+  grid-template-columns: 1fr;
+}
+
+.checkbox-grid {
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+}
+
+.form-grid label {
+  display: grid;
+  gap: 5px;
+}
+
+.form-grid label span,
+.checkbox-row span {
+  color: #39475a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font: inherit;
+  min-height: 34px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+textarea {
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.checkbox-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.checkbox-row input {
+  min-height: 0;
+  width: auto;
+}
+
+.field-error {
+  color: #9a3412;
+  font-size: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
 }

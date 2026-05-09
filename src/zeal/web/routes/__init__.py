@@ -1,1 +1,1 @@
-"""FastAPI route modules for the read-only dashboard."""
+"""FastAPI route modules for the local dashboard."""

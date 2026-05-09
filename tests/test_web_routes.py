@@ -17,6 +17,48 @@ def _seeded_db(tmp_path: Path) -> Path:
     return db_path
 
 
+def _config_payload(db_path: Path, merchant_id: str) -> dict[str, str]:
+    conn = get_connection(db_path)
+    try:
+        row = conn.execute(
+            "SELECT * FROM merchants WHERE merchant_id = ?",
+            (merchant_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row is not None
+    payload = {
+        "display_name": str(row["display_name"]),
+        "tier": str(row["tier"]),
+        "in_store_margin": _pct(row["in_store_margin"]),
+        "in_mail_margin": _pct(row["in_mail_margin"]),
+        "e_bonus": _pct(row["e_bonus"]),
+        "ebay_differential": _pct(row["ebay_differential"]),
+        "online_sell_override": _pct(row["online_sell_override"]),
+        "electronic_buy_override": _pct(row["electronic_buy_override"]),
+        "inclusion_regex": str(row["inclusion_regex"]),
+        "exclusion_regex": str(row["exclusion_regex"] or ""),
+        "notes": str(row["notes"] or ""),
+        "reason": "test change",
+    }
+    for field in (
+        "in_store_eligible",
+        "in_mail_eligible",
+        "electronic_eligible",
+        "merch_credit_variant",
+        "is_active",
+    ):
+        if row[field]:
+            payload[field] = "1"
+    return payload
+
+
+def _pct(value: object) -> str:
+    if value is None:
+        return ""
+    return f"{float(value) * 100:.1f}"
+
+
 def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     app = create_app(_seeded_db(tmp_path))
     client = TestClient(app)
@@ -68,6 +110,122 @@ def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
     assert "Reference-only in v1. Competitor data is not used in recommendations." in (
         response.text
     )
+    assert "Edit config" in response.text
+
+
+def test_merchant_config_page_loads_with_percent_values(tmp_path: Path) -> None:
+    app = create_app(_seeded_db(tmp_path))
+    client = TestClient(app)
+
+    response = client.get("/merchant/home_depot/config")
+
+    assert response.status_code == 200
+    assert "Edit config" in response.text
+    assert 'name="in_store_margin" value="25.0"' in response.text
+    assert 'name="in_mail_margin" value="7.0"' in response.text
+    assert 'name="ebay_differential" value="4.5"' in response.text
+    assert "Config changes apply to future recommendations" in response.text
+    assert "ebay_weight" not in response.text
+
+
+def test_merchant_config_save_updates_margin_and_history(tmp_path: Path) -> None:
+    db_path = _seeded_db(tmp_path)
+    app = create_app(db_path)
+    client = TestClient(app)
+    payload = _config_payload(db_path, "home_depot")
+    payload["in_mail_margin"] = "8.5%"
+    payload["reason"] = "adjust mail margin"
+
+    response = client.post("/merchant/home_depot/config", data=payload, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/merchant/home_depot?saved=1"
+    conn = get_connection(db_path)
+    try:
+        merchant = conn.execute(
+            "SELECT in_mail_margin FROM merchants WHERE merchant_id = ?",
+            ("home_depot",),
+        ).fetchone()
+        history = conn.execute(
+            """
+            SELECT field_name, old_value, new_value, reason
+            FROM merchant_config_history
+            WHERE merchant_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            ("home_depot",),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert merchant is not None
+    assert merchant["in_mail_margin"] == 0.085
+    assert history is not None
+    assert history["field_name"] == "in_mail_margin"
+    assert history["old_value"] == "0.07"
+    assert history["new_value"] == "0.085"
+    assert history["reason"] == "adjust mail margin"
+
+
+def test_merchant_config_blank_nullable_override_stores_null(tmp_path: Path) -> None:
+    db_path = _seeded_db(tmp_path)
+    app = create_app(db_path)
+    client = TestClient(app)
+    payload = _config_payload(db_path, "andiamo")
+    payload["online_sell_override"] = ""
+
+    response = client.post("/merchant/andiamo/config", data=payload, follow_redirects=False)
+
+    assert response.status_code == 303
+    conn = get_connection(db_path)
+    try:
+        merchant = conn.execute(
+            "SELECT online_sell_override FROM merchants WHERE merchant_id = ?",
+            ("andiamo",),
+        ).fetchone()
+        history = conn.execute(
+            """
+            SELECT field_name, old_value, new_value
+            FROM merchant_config_history
+            WHERE merchant_id = ? AND field_name = 'online_sell_override'
+            """,
+            ("andiamo",),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert merchant is not None
+    assert merchant["online_sell_override"] is None
+    assert history is not None
+    assert history["old_value"] == "0.85"
+    assert history["new_value"] is None
+
+
+def test_merchant_config_invalid_percentage_is_rejected(tmp_path: Path) -> None:
+    db_path = _seeded_db(tmp_path)
+    app = create_app(db_path)
+    client = TestClient(app)
+    payload = _config_payload(db_path, "home_depot")
+    payload["in_store_margin"] = "0.85"
+
+    response = client.post("/merchant/home_depot/config", data=payload)
+
+    assert response.status_code == 400
+    assert "Enter human percentages like 85 or 85%, not fractions like 0.85." in response.text
+    assert 'name="in_store_margin" value="0.85"' in response.text
+
+
+def test_config_editor_does_not_introduce_operator_workflow_tables(tmp_path: Path) -> None:
+    db_path = _seeded_db(tmp_path)
+    conn = get_connection(db_path)
+    try:
+        table_names = {
+            str(row["name"])
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+    finally:
+        conn.close()
+    assert "published_prices" not in table_names
+    assert "operator_actions" not in table_names
 
 
 def test_merchant_detail_config_override_summary(tmp_path: Path) -> None:

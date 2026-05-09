@@ -202,7 +202,7 @@ def main() -> None:
         help="Path to spreadsheet_baseline.json (default: %(default)s)",
     )
 
-    serve = subparsers.add_parser("serve", help="Run the local read-only dashboard")
+    serve = subparsers.add_parser("serve", help="Run the local dashboard")
     serve.add_argument(
         "--db-path",
         type=Path,

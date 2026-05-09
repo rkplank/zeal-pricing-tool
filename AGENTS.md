@@ -22,11 +22,11 @@ Read the relevant docs before any non-trivial change. If code and docs disagree,
 Current status as of 2026-05-09, latest verified commit `c9fe166c0ffb42db08a56208d5b3bf5b9e4ae602`:
 
 - Phase 1 complete: spreadsheet parser, pricing engine, SQLite schema, golden baseline tests.
-- FastAPI read-only dashboard implemented with seeded/synthetic recommendations and merchant detail review.
+- FastAPI dashboard implemented with seeded/synthetic recommendations, merchant detail review, and narrow merchant config editing.
 - Listing filter, refresh orchestrator, refresh routes, dashboard refresh button, live/synthetic eBay client factory, `.env.example`, and `zeal smoke-ebay` CLI exist with mocked tests.
 - Production Marketplace Insights remains blocked: the production keyset cannot mint `buy.marketplace.insights`, and eBay has not yet responded with production entitlement.
 - Synthetic dashboard polish and docs alignment are complete while waiting for eBay.
-- Narrow one-merchant-at-a-time merchant config editing is now approved for v1 scope, but not implemented yet.
+- Narrow one-merchant-at-a-time merchant config editing is implemented for formula/config inputs with history logging.
 
 Update this section when the project state changes materially.
 

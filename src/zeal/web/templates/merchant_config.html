@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% macro field_error(name) -%}
+  {% if errors.get(name) %}<span class="field-error">{{ errors[name] }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro percent_input(name, label, nullable=false) -%}
+  <label>
+    <span>{{ label }}</span>
+    <input type="text" name="{{ name }}" value="{{ form_values.get(name, '') }}" inputmode="decimal" placeholder="{% if nullable %}blank{% else %}85.0{% endif %}">
+    {{ field_error(name) }}
+  </label>
+{%- endmacro %}
+
+{% macro checkbox_input(name, label) -%}
+  <label class="checkbox-row">
+    <input type="checkbox" name="{{ name }}" value="1" {% if form_values.get(name) == "1" %}checked{% endif %}>
+    <span>{{ label }}</span>
+  </label>
+{%- endmacro %}
+
+{% block content %}
+<nav class="crumb"><a href="/">Pricing List</a> / <a href="/merchant/{{ config.merchant_id }}">{{ config.display_name }}</a> / Edit config</nav>
+
+<section class="section-head">
+  <div>
+    <h1>Edit config</h1>
+    <p>{{ config.display_name }}</p>
+  </div>
+</section>
+
+<div class="mode-banner">
+  <strong>Config changes apply to future recommendations.</strong>
+  <span>This editor changes formula inputs only. It does not publish prices, accept recommendations, or track operator pricing decisions.</span>
+</div>
+
+<form class="config-form" method="post" action="/merchant/{{ config.merchant_id }}/config">
+  <section class="panel form-section">
+    <h2>Identity</h2>
+    <div class="form-grid">
+      <label>
+        <span>Display name</span>
+        <input type="text" name="display_name" value="{{ form_values.get('display_name', '') }}">
+        {{ field_error("display_name") }}
+      </label>
+      <label>
+        <span>Tier</span>
+        <select name="tier">
+          {% for tier in tiers %}
+          <option value="{{ tier }}" {% if form_values.get('tier') == tier %}selected{% endif %}>{{ tier }}</option>
+          {% endfor %}
+        </select>
+        {{ field_error("tier") }}
+      </label>
+      {{ checkbox_input("is_active", "Active merchant") }}
+    </div>
+  </section>
+
+  <section class="panel form-section">
+    <h2>Channel Eligibility</h2>
+    <div class="form-grid checkbox-grid">
+      {{ checkbox_input("in_mail_eligible", "In-mail eligible") }}
+      {{ checkbox_input("in_store_eligible", "In-store eligible") }}
+      {{ checkbox_input("electronic_eligible", "Electronic eligible") }}
+      {{ checkbox_input("merch_credit_variant", "Merchandise credit variant") }}
+    </div>
+  </section>
+
+  <section class="panel form-section">
+    <h2>Formula Inputs</h2>
+    <p class="panel-note">Enter percentages as human percentages, such as 85 or 85%. Values are stored internally as fractions.</p>
+    <div class="form-grid">
+      {{ percent_input("in_store_margin", "In-store margin") }}
+      {{ percent_input("in_mail_margin", "In-mail margin") }}
+      {{ percent_input("e_bonus", "Electronic markdown", true) }}
+      {{ percent_input("ebay_differential", "eBay differential") }}
+    </div>
+  </section>
+
+  <section class="panel form-section">
+    <h2>Config Overrides</h2>
+    <p class="panel-note">Blank means no config override. These are formula inputs, not dashboard operator actions.</p>
+    <div class="form-grid">
+      {{ percent_input("online_sell_override", "Online sell override", true) }}
+      {{ percent_input("electronic_buy_override", "Electronic buy override", true) }}
+    </div>
+  </section>
+
+  <section class="panel form-section">
+    <h2>eBay Matching</h2>
+    <div class="form-grid">
+      <label>
+        <span>Inclusion regex</span>
+        <input type="text" name="inclusion_regex" value="{{ form_values.get('inclusion_regex', '') }}">
+        {{ field_error("inclusion_regex") }}
+      </label>
+      <label>
+        <span>Exclusion regex</span>
+        <input type="text" name="exclusion_regex" value="{{ form_values.get('exclusion_regex', '') }}">
+        {{ field_error("exclusion_regex") }}
+      </label>
+    </div>
+  </section>
+
+  <section class="panel form-section">
+    <h2>Notes</h2>
+    <div class="form-grid form-grid-single">
+      <label>
+        <span>Merchant notes</span>
+        <textarea name="notes" rows="4">{{ form_values.get('notes', '') }}</textarea>
+      </label>
+      <label>
+        <span>Change reason</span>
+        <textarea name="reason" rows="3" placeholder="Optional note for config history">{{ form_values.get('reason', '') }}</textarea>
+      </label>
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <button type="submit" class="button-link button-primary">Save config</button>
+    <a class="button-link" href="/merchant/{{ config.merchant_id }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
