@@ -21,9 +21,10 @@ production Marketplace Insights access.
 
 ## What To Say Up Front
 
-The dashboard is read-only v1. It does not publish prices, track accept/override
-decisions, edit merchant config, export CSVs, blend CardCash into
-recommendations, or expose an `ebay_weight` control.
+The dashboard does not publish prices, track accept/override decisions, export
+CSVs, blend CardCash into recommendations, or expose an `ebay_weight` control.
+A narrow merchant config editor is now in v1 scope, but this PR only changes
+wording/docs and does not add the editor yet.
 
 Synthetic baseline mode uses seeded spreadsheet-baseline recommendations. These
 rows are useful for reviewing layout, labels, formula explanations, and drill-down
@@ -48,7 +49,7 @@ Scan the table and ask:
 - Which columns do you look at first when deciding what to review?
 - Is the row spacing compact enough without feeling cramped?
 - Are percentages easy to compare when scanning across a row?
-- Are source badges clear: Synthetic baseline, Live eBay, No Data, Manual
+- Are source badges clear: Synthetic baseline, Live eBay, No Data, Config
   override?
 - Are "No Data" and "Not offered" visibly and conceptually distinct?
 - Do confidence badges help, or would different wording be more useful?
@@ -64,7 +65,7 @@ On the detail page, start with the recommendation cards and ask:
 - Are Online sell and In-mail buy prominent enough?
 - Are In-store buy, Electronic buy, eBay sell, and Confidence in the right place?
 - Can you quickly tell whether the row is synthetic, live eBay, No Data, or
-  override-based?
+  config-override-based?
 
 Move to "Why this recommendation?" and ask:
 
@@ -103,7 +104,7 @@ Review Recommendation History and ask:
 Open at least one merchant with each state, if present in the seeded data:
 
 - Synthetic baseline
-- Manual override
+- Config override
 - No Data
 - Not offered channel
 
@@ -115,7 +116,7 @@ The synthetic-mode review is successful when:
 
 - The operator understands that live eBay sold listings are not connected yet.
 - The operator can scan the list and identify rows worth drilling into.
-- Source, confidence, No Data, Not offered, and manual override labels are clear.
+- Source, confidence, No Data, Not offered, and Config override labels are clear.
 - Merchant detail pages explain the recommendation source and formula clearly.
 - eBay observation empty states do not imply live data exists.
 - Competitor Reference is understood as reference-only and not part of v1
@@ -131,7 +132,7 @@ Convert findings into small PRs:
   observation table readability.
 - Do not change formulas, schema, live eBay client behavior, smoke-test logic, or
   credential handling as part of UI feedback.
-- Keep competitor data reference-only and keep v1 read-only.
+- Keep competitor data reference-only and keep v1 non-publishing.
 - Use synthetic-mode tests for template/context behavior.
 - Save live-data concerns for credential-day validation after Marketplace
   Insights production entitlement is enabled.

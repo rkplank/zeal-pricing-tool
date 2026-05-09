@@ -345,7 +345,9 @@ Not allowed without explicit scope change:
 - Scheduled refresh.
 - Automated price publishing.
 - CSV export.
-- In-app merchant/global config editor.
+- Global constants editor.
+- Bulk merchant config editing.
+- Merchant config editor implementation beyond targeted regex/query tuning.
 
 ## 9. Evidence To Capture
 

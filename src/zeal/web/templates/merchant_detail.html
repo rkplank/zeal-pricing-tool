@@ -19,7 +19,7 @@
         {% if merchant.latest.no_data %}
         <span class="badge badge-muted">No Data</span>
         {% elif merchant.latest.config_snapshot.online_sell_override is not none or merchant.latest.config_snapshot.electronic_buy_override is not none %}
-        <span class="badge badge-muted">Manual override</span>
+        <span class="badge badge-muted">Config override</span>
         {% elif is_synthetic_mode or not merchant.has_live_ebay_observations %}
         <span class="badge badge-muted">Synthetic baseline</span>
         {% else %}
@@ -46,7 +46,13 @@
     {% if merchant.latest.no_data %}
     <strong>No valid eBay signal is available, so the latest row is marked No Data.</strong>
     {% elif merchant.latest.config_snapshot.online_sell_override is not none or merchant.latest.config_snapshot.electronic_buy_override is not none %}
-    <strong>A manual override in the seeded merchant config sets at least one channel.</strong>
+      {% if merchant.latest.config_snapshot.online_sell_override is not none and merchant.latest.config_snapshot.electronic_buy_override is not none %}
+    <strong>The online sell and electronic buy values come from configured merchant settings.</strong>
+      {% elif merchant.latest.config_snapshot.online_sell_override is not none %}
+    <strong>The online sell value comes from configured merchant settings rather than live eBay data.</strong>
+      {% else %}
+    <strong>The electronic buy value comes from configured merchant settings.</strong>
+      {% endif %}
     {% elif is_synthetic_mode or not merchant.has_live_ebay_observations %}
     <strong>Seeded spreadsheet-baseline values are displayed while production Marketplace Insights access is blocked.</strong>
     {% else %}

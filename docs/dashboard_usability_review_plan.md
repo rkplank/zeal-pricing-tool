@@ -15,7 +15,7 @@ do not represent current live eBay sold-listing prices.
 - Top-of-page mode/status messaging.
 - Pricing list scannability, column order, row spacing, and percentage alignment.
 - Source/status labels: Synthetic baseline, Live eBay, No Data, Not offered, and
-  Manual override.
+  Config override.
 - Confidence badge wording and placement.
 - Delta-column wording that explains at least two comparable runs are required.
 - Merchant detail layout and whether latest recommendation cards are prominent.
@@ -52,9 +52,9 @@ provide sold-listing data.
 - Ask whether Online sell, In-mail buy, In-store buy, Electronic buy, eBay sell,
   Source, Delta, Confidence, and Last refresh are in the right order.
 - Ask whether No Data and Not offered are distinct enough.
-- Ask whether manual overrides are clear without making the row feel like an
+- Ask whether config overrides are clear without making the row feel like an
   error.
-- Click a normal merchant, a manual-override merchant, and any No Data merchant
+- Click a normal merchant, a config-override merchant, and any No Data merchant
   present in the seeded data.
 - On each detail page, ask whether the latest recommendation cards answer the
   first question quickly.
@@ -98,6 +98,6 @@ Turn findings into focused PRs:
 - Add or update template/context tests for changed behavior.
 - Do not bundle algorithm, schema, live eBay client, smoke-test, credential, or
   `.env` changes with usability work.
-- Keep v1 read-only and keep competitor data reference-only.
+- Keep v1 non-publishing and keep competitor data reference-only.
 - Save live-data quality fixes for credential-day validation after Marketplace
   Insights production entitlement is enabled.

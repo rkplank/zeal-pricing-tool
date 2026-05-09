@@ -182,7 +182,7 @@ tr:hover td {
   background: #fffaf0;
 }
 
-.pricing-table tr.row-manual-override td {
+.pricing-table tr.row-config-override td {
   background: #f8fbff;
 }
 

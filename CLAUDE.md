@@ -17,9 +17,8 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-05-08, latest verified commit
-`3034e1538774714d0b52ca6c70fbb6004704f25f`
-(`harden marketplace insights readiness`):
+Current status as of 2026-05-09, latest verified commit
+`c9fe166c0ffb42db08a56208d5b3bf5b9e4ae602`:
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
@@ -33,8 +32,10 @@ Current status as of 2026-05-08, latest verified commit
 - Production validation is blocked. The production eBay keyset cannot mint
   `buy.marketplace.insights`; eBay has not yet responded with production
   Marketplace Insights entitlement.
-- Current productive work is synthetic-mode dashboard usability polish and
-  documentation alignment while waiting for eBay.
+- Synthetic dashboard polish and documentation alignment are complete while
+  waiting for eBay.
+- Narrow one-merchant-at-a-time merchant config editing is now approved for v1
+  scope, but not implemented yet.
 
 Do not run live eBay validation until production `buy.marketplace.insights` is
 enabled. Do not fall back to Browse API; Browse does not provide sold-listing
@@ -106,9 +107,13 @@ Cross-layer imports flow inward: `web` and `ingestion` may import from `pricing`
 - Do not put real eBay credentials in code, tests, fixtures, docs, or commit
   history.
 - Do not add automated publishing, accept/override/skip workflow, scheduled
-  refresh, CSV export, in-app config editing, multi-user auth, `ebay_weight` UI,
-  CardCash blending, risk/watchlist fields, website integration, or internal
-  sale-history inputs.
+  refresh, CSV export, global constants editing, bulk merchant config editing,
+  multi-user auth, `ebay_weight` UI, CardCash blending, risk/watchlist fields,
+  website integration, or internal sale-history inputs.
+- A narrow merchant config editor is now in v1 scope only for formula/config
+  inputs such as margins, eligibility, regexes, and config override fields, with
+  history logging. It is not operator action tracking and must not reintroduce
+  published price workflow, accept/override/skip state, or `operator_actions`.
 - Do not add a logging/telemetry framework. Standard library `logging` is enough
   until proven otherwise.
 

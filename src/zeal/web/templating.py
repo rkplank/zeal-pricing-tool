@@ -92,8 +92,8 @@ def _format_step_label(value: object) -> str:
         "in_mail_margin": "In-mail margin",
         "in_store_margin": "In-store margin",
         "ebay_differential": "eBay differential",
-        "online_sell_override": "Manual online sell override",
-        "electronic_buy_override": "Manual electronic buy override",
+        "online_sell_override": "Configured online sell value",
+        "electronic_buy_override": "Configured electronic buy value",
         "no_ebay_data_and_override_unset": "No eBay data and no override set",
         "ebay_only_due_to_missing_competitor_data": (
             "Using eBay-only recommendation; no competitor data is available"

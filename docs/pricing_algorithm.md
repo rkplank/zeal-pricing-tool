@@ -1,15 +1,15 @@
 # Zeal Cards Pricing Algorithm — v1 Specification
 
-**Status:** Draft for review — v1 scope realigned 2026-05-04
+**Status:** Draft for review — v1 scope realigned 2026-05-09
 **Owner:** [your name]
-**Last updated:** 2026-05-04
+**Last updated:** 2026-05-09
 **Source of truth:** `GiftCardPricingData_2025.xlsx` (PricingSheet, InputsandMargins) — March 2022 baseline
 
 ---
 
 ## 1. Purpose
 
-This document specifies the v1 pricing algorithm for the Zeal Cards pricing tool. The tool is a read-only review dashboard used by one operator (the owner) to view buy and sell price recommendations for gift cards. It is not an automated pricing system; the operator applies prices outside the tool, and the algorithm produces *recommendations* the operator references.
+This document specifies the v1 pricing algorithm for the Zeal Cards pricing tool. The tool is a review dashboard used by one operator (the owner) to view buy and sell price recommendations for gift cards. It is not an automated pricing system; the operator applies prices outside the tool, and the algorithm produces *recommendations* the operator references. v1 also includes a narrow merchant-level config editor for formula inputs; that editor changes configuration used by future recommendations, not published prices or operator decisions.
 
 v1 has two design properties:
 
@@ -39,6 +39,7 @@ Improvements that materially change the algorithm beyond the above are tracked i
 | **Competitor Sell %** | The fraction at which a competitor is currently buying or selling a card, expressed as a fraction of face value. Per-source, refreshed as part of the on-demand refresh. See §7. |
 | **Blended recommendation** | A channel price computed as a weighted combination of the eBay-derived recommendation and the competitor-derived recommendation, weighted by the merchant's `ebay_weight`. When `ebay_weight = 1.0`, the blended recommendation equals the eBay-only recommendation. In v1, `ebay_weight` is fixed at 1.0 for all merchants, so the blended recommendation always equals the eBay-only recommendation. |
 | **eBay Weight** | A per-merchant float in `[0, 1]` controlling how much of the recommendation comes from eBay vs competitor signal. Default 1.0 (eBay-only). Locked at 1.0 in v1 with no UI to change it; v2 introduces the slider. |
+| **Config override** | A merchant configuration field that supplies a formula input directly, such as `online_sell_override` or `electronic_buy_override`. It reflects spreadsheet/config hardcoding, not an operator action inside the dashboard. |
 
 All percentages in this document are expressed as fractions of card face value unless otherwise noted (e.g. 0.92 = 92%).
 
@@ -67,7 +68,7 @@ This pattern recurs across the in-mail margin, e-bonus, and eBay differential as
 
 **Decision for v1:** Configuration is **per-merchant**, not per-tier. Each merchant carries its own margin configuration. The tier label is preserved as a descriptive field used to suggest defaults when adding a new merchant later, but the algorithm reads margins from the merchant's own row.
 
-This decision is conservative: it preserves whatever the operator intended (whether the per-merchant variations were deliberate or accidental drift). The question of intent versus drift is out of scope for v1; a config editor and drift audit are v2 work.
+This decision is conservative: it preserves whatever the operator intended (whether the per-merchant variations were deliberate or accidental drift). The question of intent versus drift remains out of scope for v1. A narrow merchant config editor is now in v1 scope so the operator can adjust formula inputs one merchant at a time; broader drift audit work remains v2.
 
 ---
 
@@ -167,7 +168,7 @@ else:
     online_sell = ebay_sell_pct - ebay_differential
 ```
 
-`online_sell_override` is set for "Pattern A" merchants (~25 local NC-tier merchants where eBay has no useful sold-listing data and the operator manually sets a storefront price). When set, the eBay path is bypassed entirely.
+`online_sell_override` is set for "Pattern A" merchants (~25 local NC-tier merchants where eBay has no useful sold-listing data and the merchant config supplies a storefront price). When set, the eBay path is bypassed entirely.
 
 Otherwise, for normal merchants: take eBay's market price and subtract the `ebay_differential` from the merchant's config. The differential exists because Zeal's online store does not pay eBay fees, so Zeal can list slightly cheaper than eBay net while still capturing more margin. Two values exist in practice: 4.5% (competitive/T24) and 2.5% (Zen-Only/NoComp). In v1 every merchant carries its own value.
 
@@ -477,9 +478,9 @@ In v1, these values appear on the merchant detail page as reference-only context
 - **Does not auto-publish prices anywhere.** All algorithm output is read-only display in the dashboard.
 - **Does not track operator decisions.** No record of which recommendations the operator applied to the storefront and when. The `price_recommendations` table records what the algorithm output; what the operator did with it is outside this tool's scope in v1.
 - **Does not run on a schedule.** Refresh is on-demand only. The operator clicks a button when he wants new pricing data.
-- **Does not edit merchant configuration in-app.** Merchant config is seeded from the spreadsheet on initial install; changes in v1 require direct database edit. v2 introduces a config editor.
+- **Does not edit global constants or bulk-edit merchants in-app.** v1 includes a narrow one-merchant-at-a-time config editor for formula inputs such as margins, eligibility, regexes, and config override fields, with history logging. It changes future formula inputs only; it does not publish prices, accept recommendations, or record operator decisions.
 - **Does not surface `ebay_weight` to the operator.** The field exists in the schema and the engine reads it, but v1 always operates at 1.0. v2 adds the per-merchant slider.
-- **Does not flag merchants for risk.** No `risk_status` field in v1. v2 reintroduces it once a config editor exists.
+- **Does not flag merchants for risk.** No `risk_status` field in v1. v2 reintroduces it if risk/watchlist workflow becomes useful.
 - **Does not change the operator's tier assignments.** Tier is descriptive metadata.
 - **Does not use Zeal's internal sale history.** That's a v2 input.
 - **Does not parse partial-balance cards.** Suspected partial-balance listings are excluded from the eBay average. v2 may parse them.
@@ -497,7 +498,7 @@ Tracked here so they're not lost. Priority is approximate — each is a separate
 2. **Competitor-aware recommendations** — the same UI change as item 1; the algorithmic effect is that competitor data flows into the recommendation via the existing blending path.
 3. **Operator action logging** — reintroduce `published_prices` and `operator_actions` tables (or equivalents) once the operator's workflow proves stable enough to know what's worth logging. Probably tied to the website integration, since "published" means something concrete in that context.
 4. **Risk / watchlist flag** — `risk_status` field with an editor UI. Operator-curated metadata for merchants requiring extra attention.
-5. **Config editor** — first-class UI for editing per-merchant config (margins, e-bonus, regexes, eBay differential). Currently only seeding-from-spreadsheet supports this.
+5. **Broader config administration** — bulk edits, global constants editing, and drift-audit tooling. v1 now allows narrow one-merchant-at-a-time formula/config edits only.
 
 **Medium priority — algorithmic improvements:**
 

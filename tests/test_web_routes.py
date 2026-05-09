@@ -35,7 +35,7 @@ def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     assert "Synthetic baseline" in response.text
     assert "row-synthetic" in response.text
     assert "numeric-cell" in response.text
-    assert "row-manual-override" in response.text
+    assert "row-config-override" in response.text
     assert "recommendation-cell" in response.text
     assert "Delta columns populate after two or more refreshes." in response.text
     assert "last completed refresh" in response.text
@@ -70,18 +70,31 @@ def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
     )
 
 
-def test_merchant_detail_manual_override_summary(tmp_path: Path) -> None:
+def test_merchant_detail_config_override_summary(tmp_path: Path) -> None:
     app = create_app(_seeded_db(tmp_path))
     client = TestClient(app)
 
     response = client.get("/merchant/home_depot_estore_credit")
 
     assert response.status_code == 200
-    assert "Manual override" in response.text
-    assert "A manual override in the seeded merchant config sets at least one channel." in (
-        response.text
-    )
+    assert "Config override" in response.text
+    assert "The electronic buy value comes from configured merchant settings." in response.text
     assert "Not offered" in response.text
+
+
+def test_merchant_detail_online_config_override_summary(tmp_path: Path) -> None:
+    app = create_app(_seeded_db(tmp_path))
+    client = TestClient(app)
+
+    response = client.get("/merchant/andiamo")
+
+    assert response.status_code == 200
+    assert "Config override" in response.text
+    expected_summary = (
+        "The online sell value comes from configured merchant settings rather than "
+        "live eBay data."
+    )
+    assert expected_summary in response.text
 
 
 def test_missing_merchant_returns_404(tmp_path: Path) -> None:

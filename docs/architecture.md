@@ -1,8 +1,8 @@
 # Zeal Pricing Tool — Architecture
 
-**Status:** Draft for review — v1 scope realigned 2026-05-04
+**Status:** Draft for review — v1 scope realigned 2026-05-09
 **Companion to:** `pricing_algorithm.md`
-**Last updated:** 2026-05-04
+**Last updated:** 2026-05-09
 
 This document specifies how the v1 pricing tool is built and deployed. It assumes the algorithm spec is the source of truth for *what* the system computes; this doc covers *how*.
 
@@ -12,6 +12,7 @@ This document specifies how the v1 pricing tool is built and deployed. It assume
 
 **Goals:**
 - A working pricing dashboard the operator runs on demand to review pricing for ~300 merchants
+- A narrow one-merchant-at-a-time config editor for formula/config inputs, with history logging
 - Faithful implementation of the algorithm spec: spreadsheet-faithful recommendations from the eBay-only path
 - Continuous historical record of every recommendation the tool has ever produced
 - Competitor data displayed alongside recommendations as reference material (single source in v1, expandable to more)
@@ -25,7 +26,8 @@ This document specifies how the v1 pricing tool is built and deployed. It assume
 - Automated price publishing
 - Operator action tracking
 - Scheduled refresh
-- In-app configuration editing
+- Global constants editing
+- Bulk merchant configuration editing
 - Automated competitor source discovery
 - Website integration as a v1 feature
 
@@ -246,7 +248,7 @@ CREATE TABLE merchants (
 );
 ```
 
-**`merchant_config_history`** — retained for direct-DB changes and v2 editor readiness
+**`merchant_config_history`** — retained for direct-DB changes and the narrow v1 merchant config editor
 
 ```sql
 CREATE TABLE merchant_config_history (
@@ -390,12 +392,12 @@ CREATE TABLE refresh_runs (
 
 - **Percentages are stored as fractions in [0, 1].** No `"78%"` strings, no integer percentages-times-100. The algorithm operates in fractions; UI converts on display.
 - **Eligibility is per-channel.** The `in_store_eligible`, `in_mail_eligible`, `electronic_eligible` flags map directly to the spreadsheet's `"No"` convention. Any combination is permitted.
-- **Override fields are surgical.** `online_sell_override` and `electronic_buy_override` exist for specific spreadsheet patterns where the standard formula does not apply. When `NULL`, the standard formula path runs.
+- **Override fields are surgical.** `online_sell_override` and `electronic_buy_override` exist for specific spreadsheet/config patterns where the standard formula does not apply. When `NULL`, the standard formula path runs.
 - **`ebay_weight` stays in schema.** It defaults to 1.0 and v1 provides no UI to change it. Keeping the column avoids churn and preserves the v2 blending path.
 - **No FK cascades on delete.** Merchants are never deleted, only deactivated (`is_active = 0`). This preserves history.
 - **Snapshot config in `price_recommendations`.** When an old recommendation is reviewed months later, we want to know what the config was at the time, not what it is now. The JSON snapshot is the cheapest way to get this.
 - **`price_recommendations` is append-only.** Every refresh writes new rows. The merchant detail page reads the historical trail. There is no `current_recommendation` table; "current" means "most recent row by `computed_at` for this merchant."
-- **No `published_prices` or `operator_actions` tables.** v1 does not track which recommendations the operator chose to apply. v2 may reintroduce these once the operator's workflow is stable enough to define what "published" means in this tool's context.
+- **No `published_prices` or `operator_actions` tables.** v1 does not track which recommendations the operator chose to apply. The merchant config editor changes formula inputs and writes config history; it is not operator action tracking. v2 may reintroduce published-price workflow once the operator's workflow is stable enough to define what "published" means in this tool's context.
 - **No dedicated `users` table.** Single user, no auth needed.
 - **Competitor data is reference-only in v1.** Competitor observations exist for operator context and future blending. They are not used by v1 recommendations.
 - **Per-source schema, not per-merchant-per-source schema.** `competitor_observations` stores one row per observation, indexed by merchant, source, and time. Cross-source aggregation (per spec §7.4) happens at query time, not at storage time.
@@ -442,7 +444,7 @@ Single-merchant view, accessed by clicking a row in the list. Sections, top to b
 - **Recommendation history** — line chart of all four channels over the last 90 days of refreshes. Hover for tooltip with the exact value at that timestamp.
 - **Recent refresh status for this merchant** — last 10 refreshes, success/skip/error.
 
-No edit controls in v1.
+v1 includes a narrow merchant config editor for one merchant at a time. It edits formula/config inputs such as margins, eligibility, regexes, and config override fields, and writes `merchant_config_history`. It does not edit published prices, accept recommendations, or record operator decisions.
 
 ---
 
@@ -654,7 +656,8 @@ To keep v1 scoped:
 - No `published_prices` or `operator_actions` tables.
 - No risk/watchlist flagging.
 - No CSV export.
-- No in-app config editor — merchant config is seeded from the spreadsheet at install; changes require direct DB edit.
+- No global constants editor or bulk merchant config editor.
+- Narrow one-merchant-at-a-time merchant config editing is in v1 scope for formula/config inputs only; it is not operator action tracking.
 - No `ebay_weight` UI — field exists in schema and engine, locked at 1.0 in v1.
 - No internal sale history integration.
 - No automated bankruptcy or risk monitoring.

@@ -67,7 +67,7 @@
     </thead>
     <tbody>
       {% for row in rows %}
-      <tr class="{% if not row.latest %}row-no-recommendation{% elif row.latest.no_data %}row-no-data{% elif row.latest.config_snapshot.online_sell_override is not none or row.latest.config_snapshot.electronic_buy_override is not none %}row-manual-override{% elif is_synthetic_mode or not row.has_live_ebay_observations %}row-synthetic{% else %}row-live{% endif %}">
+      <tr class="{% if not row.latest %}row-no-recommendation{% elif row.latest.no_data %}row-no-data{% elif row.latest.config_snapshot.online_sell_override is not none or row.latest.config_snapshot.electronic_buy_override is not none %}row-config-override{% elif is_synthetic_mode or not row.has_live_ebay_observations %}row-synthetic{% else %}row-live{% endif %}">
         <td class="merchant-cell"><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
         <td class="quiet-cell">{{ row.tier }}</td>
         {% if row.latest %}
@@ -80,7 +80,7 @@
           {% if row.latest.no_data %}
           <span class="badge badge-warning">No Data</span>
           {% elif row.latest.config_snapshot.online_sell_override is not none or row.latest.config_snapshot.electronic_buy_override is not none %}
-          <span class="badge badge-override">Manual override</span>
+          <span class="badge badge-override">Config override</span>
           {% elif is_synthetic_mode or not row.has_live_ebay_observations %}
           <span class="badge badge-synthetic">Synthetic baseline</span>
           {% else %}

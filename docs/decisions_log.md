@@ -290,3 +290,19 @@ Competitor data is reference-only in v1 — displayed on the merchant detail pag
 **Alternatives:** (a) keep waiting without further work; (b) attempt a Browse API workaround; (c) proceed with synthetic-mode usability review.
 
 **Rationale:** synthetic mode already provides seeded baseline recommendations that are sufficient for reviewing table scannability, labels, detail-page comprehension, formula explanations, and operator workflow. Browse API cannot supply sold listings and would produce the wrong market signal. Live data quality work belongs on credential day after production Marketplace Insights entitlement is enabled.
+
+---
+
+## 2026-05-09 — Rename manual override display to config override
+
+**Alternatives:** (a) keep "manual override"; (b) rename dashboard source/status labels to "Config override."
+
+**Rationale:** "manual override" was misleading because it sounded like the operator had taken an action inside the dashboard. The label actually reflected spreadsheet/config hardcoded inputs such as `online_sell_override` and `electronic_buy_override`, not operator action history, accept/override/skip workflow, or published-price state. The dashboard now says "Config override" for those source/status labels.
+
+---
+
+## 2026-05-09 — Bring narrow merchant config editor into v1 scope
+
+**Alternatives:** (a) keep all config editing out of v1; (b) add broad admin/config editing; (c) allow only narrow one-merchant-at-a-time formula/config editing with history logging.
+
+**Rationale:** This is an explicit v1 scope change while awaiting eBay access. The spreadsheet was both a display surface and a control surface; a narrow merchant config editor preserves operator authority and helps tune regexes/config after live eBay access. Allowed scope is one-merchant-at-a-time config editing with history logging. Still out of scope: global constants editor, bulk editing, accept/override/skip workflow, `published_prices`, `operator_actions`, `ebay_weight` UI, competitor blending, auto-publishing, scheduled refresh, and internal sale history.

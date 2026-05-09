@@ -19,13 +19,14 @@ Read the relevant docs before any non-trivial change. If code and docs disagree,
 
 ## Current v1 status
 
-Current status as of 2026-05-08, latest verified commit `3034e1538774714d0b52ca6c70fbb6004704f25f` (`harden marketplace insights readiness`):
+Current status as of 2026-05-09, latest verified commit `c9fe166c0ffb42db08a56208d5b3bf5b9e4ae602`:
 
 - Phase 1 complete: spreadsheet parser, pricing engine, SQLite schema, golden baseline tests.
 - FastAPI read-only dashboard implemented with seeded/synthetic recommendations and merchant detail review.
 - Listing filter, refresh orchestrator, refresh routes, dashboard refresh button, live/synthetic eBay client factory, `.env.example`, and `zeal smoke-ebay` CLI exist with mocked tests.
 - Production Marketplace Insights remains blocked: the production keyset cannot mint `buy.marketplace.insights`, and eBay has not yet responded with production entitlement.
-- Current productive work is synthetic-mode dashboard UI/usability review plus documentation alignment while waiting for eBay.
+- Synthetic dashboard polish and docs alignment are complete while waiting for eBay.
+- Narrow one-merchant-at-a-time merchant config editing is now approved for v1 scope, but not implemented yet.
 
 Update this section when the project state changes materially.
 
@@ -72,7 +73,8 @@ Do not add any of the following unless the user explicitly changes scope:
 - Operator accept/override/skip workflow.
 - Scheduled refresh.
 - CSV export.
-- In-app merchant/global config editor.
+- Global constants editor.
+- Bulk merchant config editing.
 - Multi-user auth.
 - `ebay_weight` UI.
 - Competitor/CardCash influence on v1 recommendations.
@@ -81,6 +83,11 @@ Do not add any of the following unless the user explicitly changes scope:
 - Recency weighting, outlier filtering, partial-balance parsing, dynamic tier reassignment, bankruptcy detection, or internal sale-history inputs.
 
 Competitor data is reference-only in v1.
+
+A narrow merchant config editor is now in v1 scope only for formula/config
+inputs such as margins, eligibility, regexes, and config override fields, with
+history logging. It is not operator action tracking and must not reintroduce
+published price workflow, accept/override/skip state, or `operator_actions`.
 
 ## eBay/live-data rules
 
