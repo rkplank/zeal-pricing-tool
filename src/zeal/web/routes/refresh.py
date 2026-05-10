@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from zeal.db.connection import get_connection
 from zeal.ingestion.refresh import run_refresh
 from zeal.models.pricing import GlobalConstants
-from zeal.web.templating import templates
+from zeal.web.templating import mode_context, templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -67,7 +67,8 @@ async def _run_in_background(db_path: Path, ebay_client_factory: object) -> None
     conn = get_connection(db_path)
     try:
         constants = _load_constants(conn)
-        # TODO: replace SyntheticEbayClient with the real Marketplace Insights client
+        # Factory returns SyntheticEbayClient or EbayMarketplaceInsightsClient
+        # based on ZEAL_EBAY_MODE. No code change needed; flip .env to go live.
         ebay_client = ebay_client_factory()  # type: ignore[operator]
 
         async def _commit_progress(processed: int, total: int) -> None:
@@ -159,7 +160,7 @@ async def refresh_status(request: Request) -> object:
         "partials/refresh_idle.html",
         {
             "last_completed": last["completed_at"] if last else None,
-            **_mode_context(request),
+            **mode_context(request),
         },
     )
     # Signal list re-fetch only when transitioning from a task started in this
@@ -169,12 +170,3 @@ async def refresh_status(request: Request) -> object:
         response.headers["HX-Trigger"] = "refreshList"
         request.app.state.refresh_task = None
     return response
-
-
-def _mode_context(request: Request) -> dict[str, object]:
-    config = request.app.state.zeal_config
-    is_synthetic = config.ebay_mode == "synthetic"
-    return {
-        "ebay_mode_label": "Synthetic" if is_synthetic else "Live eBay",
-        "is_synthetic_mode": is_synthetic,
-    }

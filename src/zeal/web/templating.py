@@ -3,10 +3,21 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
 WEB_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=WEB_DIR / "templates")
+
+
+def mode_context(request: Request) -> dict[str, object]:
+    """Return template context keys for the current eBay mode."""
+    config = request.app.state.zeal_config
+    is_synthetic = config.ebay_mode == "synthetic"
+    return {
+        "ebay_mode_label": "Synthetic" if is_synthetic else "Live eBay",
+        "is_synthetic_mode": is_synthetic,
+    }
 
 
 def configure_template_filters() -> None:
