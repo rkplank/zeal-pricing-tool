@@ -146,6 +146,7 @@ def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert "Pricing List" in response.text
     assert "Home Depot" in response.text
+    assert "recommendations from saved tool outputs" in response.text
     assert "Mode: Synthetic" in response.text
     assert "Synthetic baseline mode — live eBay sold listings are not connected yet." in (
         response.text
@@ -156,6 +157,8 @@ def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     assert "row-synthetic" in response.text
     assert "numeric-cell" in response.text
     assert "row-config-override" in response.text
+    assert "sticky-col" in response.text
+    assert "badge-confidence" in response.text
     assert "recommendation-cell" in response.text
     assert "Delta columns populate after two or more refreshes." in response.text
     assert "last completed refresh" in response.text
@@ -170,6 +173,7 @@ def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert "Why this recommendation?" in response.text
+    assert "Formula Breakdown" in response.text
     assert "No CardCash data yet" in response.text
     assert "Mode: Synthetic" in response.text
     assert "Synthetic baseline mode — live eBay sold listings are not connected yet." in (
@@ -291,6 +295,10 @@ def test_merchant_config_page_loads_with_percent_values(tmp_path: Path) -> None:
     assert 'name="in_mail_margin" value="7.0"' in response.text
     assert 'name="ebay_differential" value="4.5"' in response.text
     assert "Config changes apply to future recommendations" in response.text
+    assert "Enter percentages as 85.0 for 85.0%. Values are stored internally as 0.850." in (
+        response.text
+    )
+    assert "Leave blank to use the formula." in response.text
     assert "ebay_weight" not in response.text
 
 
@@ -402,7 +410,9 @@ def test_merchant_detail_config_override_summary(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert "Config override" in response.text
-    assert "The electronic buy value comes from configured merchant settings." in response.text
+    assert "Configured merchant settings supply the electronic buy value for the formula." in (
+        response.text
+    )
     assert "Not offered" in response.text
 
 
@@ -415,8 +425,7 @@ def test_merchant_detail_online_config_override_summary(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert "Config override" in response.text
     expected_summary = (
-        "The online sell value comes from configured merchant settings rather than "
-        "live eBay data."
+        "Configured merchant settings supply the online sell value instead of live eBay data."
     )
     assert expected_summary in response.text
 

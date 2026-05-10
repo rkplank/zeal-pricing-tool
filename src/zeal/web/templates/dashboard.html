@@ -4,7 +4,7 @@
 <section class="section-head">
   <div>
     <h1>Pricing List</h1>
-    <p>{{ rows|length }} active merchants</p>
+    <p>{{ rows|length }} active merchants · recommendations from saved tool outputs</p>
   </div>
   <div id="refresh-region"
        hx-get="/refresh/status"
@@ -32,7 +32,7 @@
 {% if is_synthetic_mode %}
 <div class="mode-banner">
   <strong>Synthetic baseline mode — live eBay sold listings are not connected yet.</strong>
-  <span>Awaiting production Marketplace Insights access. Seeded spreadsheet-baseline recommendations are for UI review and do not mean live market prices are current.</span>
+  <span>Awaiting production Marketplace Insights access. Seeded spreadsheet-baseline recommendations support workflow review and do not mean live market prices are current.</span>
 </div>
 {% endif %}
 
@@ -51,7 +51,7 @@
         <th colspan="2"></th>
       </tr>
       <tr>
-        <th>Merchant</th>
+        <th class="sticky-col">Merchant</th>
         <th>Tier</th>
         <th class="numeric-cell">eBay sell</th>
         <th class="numeric-cell">Online sell</th>
@@ -68,7 +68,7 @@
     <tbody>
       {% for row in rows %}
       <tr class="{% if not row.latest %}row-no-recommendation{% elif row.latest.no_data %}row-no-data{% elif row.latest.config_snapshot.online_sell_override is not none or row.latest.config_snapshot.electronic_buy_override is not none %}row-config-override{% elif is_synthetic_mode or not row.has_live_ebay_observations %}row-synthetic{% else %}row-live{% endif %}">
-        <td class="merchant-cell"><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
+        <td class="merchant-cell sticky-col"><a href="/merchant/{{ row.merchant_id }}">{{ row.display_name }}</a></td>
         <td class="quiet-cell">{{ row.tier }}</td>
         {% if row.latest %}
         <td class="quiet-cell numeric-cell">{{ row.latest.ebay_sell_pct|pct("No eBay data") }}</td>
@@ -107,7 +107,7 @@
           {% if row.max_abs_delta_channel %}<span>{{ row.max_abs_delta_channel|channel }}</span>{% endif %}
           {% endif %}
         </td>
-        <td><span class="badge">{{ row.latest.ebay_confidence|confidence }}</span></td>
+        <td><span class="badge badge-confidence">{{ row.latest.ebay_confidence|confidence }}</span></td>
         <td class="quiet-cell">{{ row.latest.computed_at|datetime }}</td>
         {% else %}
         <td colspan="10" class="empty">No recommendation seeded yet</td>

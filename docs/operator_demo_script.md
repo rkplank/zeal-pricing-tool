@@ -81,6 +81,13 @@ Review Price History and ask:
 - Should In-store buy or Electronic buy be emphasized differently?
 - Should competitor/reference lines remain separate for now?
 
+Open Edit config and ask:
+
+- Do the field groups match how the spreadsheet acted as a control surface?
+- Is the percentage helper text clear?
+- Is it clear blank override fields use the formula?
+- Is it clear edits affect future recommendations/config, not published prices?
+
 Review the formula breakdown and ask:
 
 - Are the labels understandable without developer context?

@@ -20,7 +20,11 @@ do not represent current live eBay sold-listing prices.
 - Delta-column wording that explains at least two comparable runs are required.
 - Merchant detail layout and whether latest recommendation cards are prominent.
 - "Why this recommendation?" copy and placement.
+- Price history chart clarity and whether it is understood as recommendation
+  history only.
 - Formula breakdown label clarity for a non-developer operator.
+- Merchant config editor usability and whether it feels like the old
+  spreadsheet's control surface.
 - Synthetic empty states for Recent eBay Observations and Excluded eBay
   Observations.
 - Competitor Reference wording that keeps competitor data reference-only in v1.
@@ -36,6 +40,8 @@ do not represent current live eBay sold-listing prices.
 - Valid/excluded listing split for real sold listings.
 - Recommendation plausibility against current live market conditions.
 - Full live refresh runtime and failure behavior.
+- Any comparison against actual Zeal published prices, because the tool does not
+  track prices used or published outside the dashboard.
 
 Production validation must wait until `buy.marketplace.insights` is enabled for
 the production keyset. Browse API fallback is not allowed because Browse does not
@@ -58,7 +64,11 @@ provide sold-listing data.
   present in the seeded data.
 - On each detail page, ask whether the latest recommendation cards answer the
   first question quickly.
-- Review "Why this recommendation?" and formula breakdown labels.
+- Review "Why this recommendation?", the price history chart, and formula
+  breakdown labels.
+- Open Edit config and ask whether the field groups feel like the spreadsheet's
+  control surface without implying pricing decisions are tracked here.
+- Confirm percentage helper text and blank override behavior are clear.
 - Review eBay observation empty states and ask what fields the operator will want
   once live observations exist.
 - Review Competitor Reference and confirm it is understood as reference-only.
@@ -71,6 +81,9 @@ provide sold-listing data.
 - Percentage columns that are hard to compare across rows.
 - Delta columns that look broken before a second comparable run exists.
 - Formula labels that use implementation language instead of operator language.
+- Config editor copy that makes a formula-input edit sound like a published
+  pricing decision.
+- Price history copy that implies actual Zeal prices are tracked.
 - Empty eBay sections that look like a data failure instead of expected
   pre-access state.
 - Competitor reference copy that implies CardCash affects v1 recommendations.
@@ -84,6 +97,9 @@ The synthetic-mode review is successful when:
 - The operator can identify which rows deserve attention from the list view.
 - Source/status labels are understood without developer explanation.
 - Detail pages make the recommendation, source, and formula easy to audit.
+- Price history is understood as saved recommendation history, not actual or
+  published Zeal prices.
+- Config editor feels like a narrow control surface for merchant formula inputs.
 - Pending eBay and competitor sections are honest about what is and is not
   connected.
 - The operator confirms the dashboard can support a real review session once live

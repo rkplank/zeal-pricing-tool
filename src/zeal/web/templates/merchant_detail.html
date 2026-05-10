@@ -6,7 +6,7 @@
 {% if is_synthetic_mode %}
 <div class="mode-banner">
   <strong>Synthetic baseline mode — live eBay sold listings are not connected yet.</strong>
-  <span>Awaiting production Marketplace Insights access. Use this page to review layout, labels, and formulas, not current live market movement.</span>
+  <span>Awaiting production Marketplace Insights access. Use this page to review layout, labels, formula config, and history display, not current live market movement.</span>
 </div>
 {% endif %}
 
@@ -52,11 +52,11 @@
     <strong>No valid eBay signal is available, so the latest row is marked No Data.</strong>
     {% elif merchant.latest.config_snapshot.online_sell_override is not none or merchant.latest.config_snapshot.electronic_buy_override is not none %}
       {% if merchant.latest.config_snapshot.online_sell_override is not none and merchant.latest.config_snapshot.electronic_buy_override is not none %}
-    <strong>The online sell and electronic buy values come from configured merchant settings.</strong>
+    <strong>Configured merchant settings supply the online sell and electronic buy values for the formula.</strong>
       {% elif merchant.latest.config_snapshot.online_sell_override is not none %}
-    <strong>The online sell value comes from configured merchant settings rather than live eBay data.</strong>
+    <strong>Configured merchant settings supply the online sell value instead of live eBay data.</strong>
       {% else %}
-    <strong>The electronic buy value comes from configured merchant settings.</strong>
+    <strong>Configured merchant settings supply the electronic buy value for the formula.</strong>
       {% endif %}
     {% elif is_synthetic_mode or not merchant.has_live_ebay_observations %}
     <strong>Seeded spreadsheet-baseline values are displayed while production Marketplace Insights access is blocked.</strong>
@@ -107,7 +107,8 @@
 </section>
 
 <section class="panel panel-secondary">
-  <h2>Why this recommendation?</h2>
+  <h2>Formula Breakdown</h2>
+  <p class="panel-note">Audit details for the current recommendation. These steps explain the math but do not change the recommendation.</p>
   {% include "partials/breakdown.html" %}
 </section>
 {% else %}

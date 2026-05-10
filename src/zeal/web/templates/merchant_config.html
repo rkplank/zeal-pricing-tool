@@ -31,7 +31,7 @@
 
 <div class="mode-banner">
   <strong>Config changes apply to future recommendations.</strong>
-  <span>This editor changes formula inputs only. It does not publish prices, accept recommendations, or track operator pricing decisions.</span>
+  <span>This editor changes merchant formula/config inputs only. It does not publish prices, accept recommendations, or track operator pricing decisions.</span>
 </div>
 
 <form class="config-form" method="post" action="/merchant/{{ config.merchant_id }}/config">
@@ -68,7 +68,7 @@
 
   <section class="panel form-section">
     <h2>Formula Inputs</h2>
-    <p class="panel-note">Enter percentages as human percentages, such as 85 or 85%. Values are stored internally as fractions.</p>
+    <p class="panel-note">Enter percentages as 85.0 for 85.0%. Values are stored internally as 0.850.</p>
     <div class="form-grid">
       {{ percent_input("in_store_margin", "In-store margin") }}
       {{ percent_input("in_mail_margin", "In-mail margin") }}
@@ -79,7 +79,7 @@
 
   <section class="panel form-section">
     <h2>Config Overrides</h2>
-    <p class="panel-note">Blank means no config override. These are formula inputs, not dashboard operator actions.</p>
+    <p class="panel-note">Leave blank to use the formula. Config overrides are formula inputs, not dashboard operator actions.</p>
     <div class="form-grid">
       {{ percent_input("online_sell_override", "Online sell override", true) }}
       {{ percent_input("electronic_buy_override", "Electronic buy override", true) }}
@@ -116,7 +116,7 @@
     </div>
   </section>
 
-  <div class="form-actions">
+  <div class="form-actions form-actions-sticky">
     <button type="submit" class="button-link button-primary">Save config</button>
     <a class="button-link" href="/merchant/{{ config.merchant_id }}">Cancel</a>
   </div>
