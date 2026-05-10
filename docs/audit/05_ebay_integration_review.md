@@ -1,7 +1,10 @@
 # Audit Report 05 — eBay Integration Review
 
 **Audit date:** 2026-05-10  
-**Branch:** audit/opus-4-7-review
+**Branch:** audit/opus-4-7-review  
+**Phase 4 re-verification:** 2026-05-10 — all findings below re-checked against
+current code after Phase 3 changes. Two items from §4 and §6 are now resolved;
+see notes inline.
 
 ---
 
@@ -143,21 +146,22 @@ No Browse API paths, method names, or endpoint strings exist in the codebase.
 
 ---
 
-## 4. OAuth scope centralization — confirmed, with one observation
+## 4. OAuth scope centralization — **confirmed clean** (Phase 3 fix applied)
 
-`_SCOPE = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"` is defined once in `ebay_oauth.py:11`. It is used in `EbayTokenManager._fetch()` at line 69. No other file defines or references this scope string.
+`_SCOPE = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"` is defined once in `ebay_oauth.py:11`. It is used in:
+- `EbayTokenManager._fetch()` at line 69 (the OAuth POST body)
+- `_invalid_scope_message()` at line 98 via `{_SCOPE}` interpolation (fixed in Phase 3)
 
-**Observation:** the scope string in `_invalid_scope_message()` (line 95) hardcodes the scope again as a string literal inside the error message. If the scope ever changes, both `_SCOPE` and the string in `_invalid_scope_message()` would need updating. Low risk (scope changes would be an eBay API versioning event, not a day-to-day change), but a minor consistency gap.
+**Phase 3 resolution:** The duplicate scope literal at line 95 (`scope = "https://..."`) was removed and replaced with a direct reference to `_SCOPE`. The scope string now exists in exactly one place.
 
-**Search run:**
+**Current search result:**
 ```
 grep -rn "buy.marketplace.insights" src/zeal/
-# Result:
-#   ebay_oauth.py:11: _SCOPE = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
-#   ebay_oauth.py:95: scope = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
+# ebay_oauth.py:11:  _SCOPE = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
+# ebay_oauth.py:100: "buy.marketplace.insights is assigned to this keyset. Do not run the ..."
 ```
 
-The second occurrence at line 95 is inside `_invalid_scope_message()` and duplicates the constant rather than referencing it. Low-risk but worth fixing.
+The line 100 mention is human-readable instruction text in the error message (not a code constant); no action needed. The scope string is centralized.
 
 ---
 
@@ -175,8 +179,8 @@ The second occurrence at line 95 is inside `_invalid_scope_message()` and duplic
 
 ---
 
-## 6. Flag: items a future developer would need to change for live operation
+## 6. Remaining items for live operation
 
-- **`_invalid_scope_message()` scope literal (line 95):** Use `_SCOPE` constant instead of re-stating the string.
-- **Stale TODO at `web/routes/refresh.py:70`:** Remove or clarify — it implies a code change that is not needed.
-- **No rate-limit budget configuration:** `per_call_sleep_ms=100` is hardcoded as a default in `EbayMarketplaceInsightsClient.__init__`. It is exposed as a constructor parameter, and `create_ebay_client()` does not pass it (so 100ms is always used). If the granted eBay tier has different quota, this would require a code change (or adding a `EBAY_SLEEP_MS` env var). Currently a config gap.
+- ~~**`_invalid_scope_message()` scope literal:** Use `_SCOPE` constant.~~ **RESOLVED in Phase 3.**
+- ~~**Stale TODO at `web/routes/refresh.py:70`.**~~ **RESOLVED in Phase 3** — replaced with accurate comment.
+- **No rate-limit budget configuration:** `per_call_sleep_ms=100` is hardcoded as a default in `EbayMarketplaceInsightsClient.__init__`. It is exposed as a constructor parameter, but `create_ebay_client()` does not pass it (100ms is always used). If the granted eBay tier requires different pacing, a code change (or adding a `EBAY_SLEEP_MS` env var) would be needed. Documented in `11_followups.md` #10. **Not blocking for credential day.**
