@@ -74,6 +74,38 @@
   </div>
 </section>
 
+<section class="panel price-history-panel" aria-label="Price history">
+  <h2>Price History</h2>
+  <p class="panel-note">Recommendation history from saved tool outputs. This does not represent prices actually published or used outside the tool.</p>
+  {% if price_history_chart.has_chart %}
+  <div class="history-chart-wrap">
+    <svg class="history-chart" viewBox="0 0 720 260" role="img" aria-label="Recommendation history chart">
+      <rect x="54" y="16" width="648" height="202" class="chart-plot"></rect>
+      {% for tick in price_history_chart.y_ticks %}
+      <line x1="54" x2="702" y1="{{ '%.1f'|format(tick.y) }}" y2="{{ '%.1f'|format(tick.y) }}" class="chart-grid"></line>
+      <text x="46" y="{{ '%.1f'|format(tick.y + 4) }}" class="chart-axis-label" text-anchor="end">{{ tick.label }}</text>
+      {% endfor %}
+      <line x1="54" x2="702" y1="218" y2="218" class="chart-axis"></line>
+      <line x1="54" x2="54" y1="16" y2="218" class="chart-axis"></line>
+      <text x="54" y="244" class="chart-axis-label" text-anchor="start">{{ price_history_chart.first_label }}</text>
+      <text x="702" y="244" class="chart-axis-label" text-anchor="end">{{ price_history_chart.last_label }}</text>
+      {% for series in price_history_chart.series %}
+        {% for segment in series.segments %}
+      <polyline points="{{ segment.points }}" fill="none" stroke="{{ series.color }}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        {% endfor %}
+      {% endfor %}
+    </svg>
+  </div>
+  <div class="chart-legend">
+    {% for series in price_history_chart.series %}
+    <span><i style="background: {{ series.color }}"></i>{{ series.label }}</span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty">{{ price_history_chart.empty_message }}</p>
+  {% endif %}
+</section>
+
 <section class="panel panel-secondary">
   <h2>Why this recommendation?</h2>
   {% include "partials/breakdown.html" %}

@@ -23,8 +23,8 @@ production Marketplace Insights access.
 
 The dashboard does not publish prices, track accept/override decisions, export
 CSVs, blend CardCash into recommendations, or expose an `ebay_weight` control.
-A narrow merchant config editor is now in v1 scope, but this PR only changes
-wording/docs and does not add the editor yet.
+The merchant config editor changes formula inputs only; it is not price
+publishing or operator action tracking.
 
 Synthetic baseline mode uses seeded spreadsheet-baseline recommendations. These
 rows are useful for reviewing layout, labels, formula explanations, and drill-down
@@ -73,6 +73,14 @@ Move to "Why this recommendation?" and ask:
 - Does it explain the recommendation source before you inspect formulas?
 - Does the synthetic-mode warning prevent accidental trust in old market data?
 
+Review Price History and ask:
+
+- Is it clear the chart uses saved tool recommendations only?
+- Is it clear the chart does not show prices Zeal actually used or published?
+- Are Online sell, In-mail buy, and eBay sell the right default lines?
+- Should In-store buy or Electronic buy be emphasized differently?
+- Should competitor/reference lines remain separate for now?
+
 Review the formula breakdown and ask:
 
 - Are the labels understandable without developer context?
@@ -94,9 +102,10 @@ Review Competitor Reference and ask:
 - Is it clear CardCash/competitor data does not feed the recommendation?
 - Which competitor fields are useful before any future blending work?
 
-Review Recommendation History and ask:
+Review Recommendation History table and ask:
 
 - Does the history table help you understand movement?
+- Does keeping the audit table below the chart feel useful?
 - Would you use this during a normal pricing review?
 
 ## Edge-State Checks
@@ -118,6 +127,8 @@ The synthetic-mode review is successful when:
 - The operator can scan the list and identify rows worth drilling into.
 - Source, confidence, No Data, Not offered, and Config override labels are clear.
 - Merchant detail pages explain the recommendation source and formula clearly.
+- Price history is understood as recommendation history only, not published or
+  accepted prices.
 - eBay observation empty states do not imply live data exists.
 - Competitor Reference is understood as reference-only and not part of v1
   recommendations.

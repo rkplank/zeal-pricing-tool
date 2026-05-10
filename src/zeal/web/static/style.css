@@ -379,6 +379,62 @@ tr:hover td {
   font-size: 14px;
 }
 
+.price-history-panel {
+  overflow-x: auto;
+}
+
+.history-chart-wrap {
+  min-width: 640px;
+}
+
+.history-chart {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.chart-plot {
+  fill: #fbfdff;
+  stroke: var(--border);
+}
+
+.chart-grid {
+  stroke: #e3e9f0;
+  stroke-width: 1;
+}
+
+.chart-axis {
+  stroke: #9aa7b6;
+  stroke-width: 1.25;
+}
+
+.chart-axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+}
+
+.chart-legend span {
+  align-items: center;
+  color: #39475a;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.chart-legend i {
+  border-radius: 999px;
+  display: inline-block;
+  height: 8px;
+  width: 18px;
+}
+
 .detail-table th {
   position: static;
 }

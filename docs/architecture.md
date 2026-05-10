@@ -437,11 +437,12 @@ The visual density target is the spreadsheet's: tight rows, dominant data, minim
 Single-merchant view, accessed by clicking a row in the list. Sections, top to bottom:
 
 - **Latest recommendation** — the four channel prices, large and clear. eBay confidence badge.
+- **Price history chart** — server-rendered line chart from saved `price_recommendations` rows for this merchant. Default visible lines are Online sell, In-mail buy, and eBay sell; in-store and electronic buy are also shown when enough values exist. The chart is recommendation history only and does not represent prices Zeal actually used, accepted, published, or applied outside the tool. Competitor chart lines are future/reference-only work; v1 keeps competitor data in the separate reference panel.
 - **Formula breakdown** — per-channel worked formula from `BreakdownStep` sequences (spec §5.6). Rendered as a stack of `[label] [sign] [value]` rows leading to the final value.
 - **Recent eBay observations** — table of the most recent 30 valid listings used in the average. Sortable by sold date, face value, sale price, computed sell percentage.
 - **Excluded eBay observations** — collapsible table of listings filtered out, with `exclusion_reason`. Useful for debugging the regex and validity rules.
 - **Competitor reference panel** — for each configured competitor source (v1: CardCash only), the most recent observation per channel: `price_pct`, `availability`, `confidence`, `observed_at`, source URL. Reference-only — explicitly marked as not feeding the recommendation in v1.
-- **Recommendation history** — line chart of all four channels over the last 90 days of refreshes. Hover for tooltip with the exact value at that timestamp.
+- **Recommendation history** — audit table of saved recommendation rows below the chart.
 - **Recent refresh status for this merchant** — last 10 refreshes, success/skip/error.
 
 v1 includes a narrow merchant config editor for one merchant at a time. It edits formula/config inputs such as margins, eligibility, regexes, and config override fields, and writes `merchant_config_history`. It does not edit published prices, accept recommendations, or record operator decisions.

@@ -12,6 +12,7 @@ from zeal.db.repositories import (
     MERCHANT_CONFIG_FIELDS,
     MerchantConfigRow,
     MerchantConfigValue,
+    RecommendationSnapshot,
     fetch_merchant_config,
     fetch_merchant_detail,
     update_merchant_config,
@@ -29,6 +30,19 @@ CHECKBOX_FIELDS = (
     "merch_credit_variant",
     "is_active",
 )
+CHART_CHANNELS = (
+    ("online_sell", "Online sell", "#145ea8"),
+    ("in_mail_buy", "In-mail buy", "#256047"),
+    ("ebay_sell_pct", "eBay sell", "#8a5b00"),
+    ("in_store_buy", "In-store buy", "#6d4fb3"),
+    ("electronic_buy", "Electronic buy", "#b14f22"),
+)
+CHART_WIDTH = 720
+CHART_HEIGHT = 260
+CHART_LEFT = 54
+CHART_RIGHT = 18
+CHART_TOP = 16
+CHART_BOTTOM = 42
 
 
 @dataclass(frozen=True)
@@ -36,6 +50,34 @@ class ConfigFormParseResult:
     values: dict[str, MerchantConfigValue]
     reason: str | None
     errors: dict[str, str]
+
+
+@dataclass(frozen=True)
+class ChartSegment:
+    points: str
+
+
+@dataclass(frozen=True)
+class PriceHistorySeries:
+    label: str
+    color: str
+    segments: list[ChartSegment]
+
+
+@dataclass(frozen=True)
+class ChartTick:
+    label: str
+    y: float
+
+
+@dataclass(frozen=True)
+class PriceHistoryChart:
+    has_chart: bool
+    series: list[PriceHistorySeries]
+    y_ticks: list[ChartTick]
+    first_label: str
+    last_label: str
+    empty_message: str | None = None
 
 
 @router.get("/merchant/{merchant_id}")
@@ -52,6 +94,7 @@ def merchant_detail(request: Request, merchant_id: str) -> object:
         "merchant_detail.html",
         {
             "merchant": bundle,
+            "price_history_chart": build_price_history_chart(bundle.history),
             "title": bundle.display_name,
             "saved": request.query_params.get("saved") == "1",
             **_mode_context(request),
@@ -107,6 +150,119 @@ def _mode_context(request: Request) -> dict[str, object]:
         "ebay_mode_label": "Synthetic" if is_synthetic else "Live eBay",
         "is_synthetic_mode": is_synthetic,
     }
+
+
+def build_price_history_chart(history_desc: list[RecommendationSnapshot]) -> PriceHistoryChart:
+    if len(history_desc) < 2:
+        return PriceHistoryChart(
+            has_chart=False,
+            series=[],
+            y_ticks=[],
+            first_label="",
+            last_label="",
+            empty_message="History chart will appear after two recommendations exist.",
+        )
+    history = list(reversed(history_desc))
+    values = [
+        value
+        for snapshot in history
+        for field, _, _ in CHART_CHANNELS
+        if (value := getattr(snapshot, field)) is not None
+    ]
+    if not values:
+        return PriceHistoryChart(
+            has_chart=False,
+            series=[],
+            y_ticks=[],
+            first_label="",
+            last_label="",
+            empty_message="No plottable recommendation values are available yet.",
+        )
+    min_value, max_value = _chart_domain(values)
+    y_ticks = [
+        ChartTick(label=_format_pct_tick(value), y=_chart_y(value, min_value, max_value))
+        for value in (max_value, (min_value + max_value) / 2, min_value)
+    ]
+    return PriceHistoryChart(
+        has_chart=True,
+        series=[
+            series
+            for field, label, color in CHART_CHANNELS
+            if (
+                series := _build_chart_series(
+                    history,
+                    field=field,
+                    label=label,
+                    color=color,
+                    min_value=min_value,
+                    max_value=max_value,
+                )
+            )
+            is not None
+        ],
+        y_ticks=y_ticks,
+        first_label=_date_label(history[0].computed_at),
+        last_label=_date_label(history[-1].computed_at),
+    )
+
+
+def _chart_domain(values: list[float]) -> tuple[float, float]:
+    min_value = min(values)
+    max_value = max(values)
+    if min_value == max_value:
+        padding = 0.02
+    else:
+        padding = max((max_value - min_value) * 0.12, 0.01)
+    return max(0.0, min_value - padding), min(1.0, max_value + padding)
+
+
+def _build_chart_series(
+    history: list[RecommendationSnapshot],
+    *,
+    field: str,
+    label: str,
+    color: str,
+    min_value: float,
+    max_value: float,
+) -> PriceHistorySeries | None:
+    segments: list[ChartSegment] = []
+    current: list[str] = []
+    last_index = len(history) - 1
+    for index, snapshot in enumerate(history):
+        value = getattr(snapshot, field)
+        if value is None:
+            if len(current) >= 2:
+                segments.append(ChartSegment(points=" ".join(current)))
+            current = []
+            continue
+        current.append(
+            f"{_chart_x(index, last_index):.1f},{_chart_y(value, min_value, max_value):.1f}"
+        )
+    if len(current) >= 2:
+        segments.append(ChartSegment(points=" ".join(current)))
+    if not segments:
+        return None
+    return PriceHistorySeries(label=label, color=color, segments=segments)
+
+
+def _chart_x(index: int, last_index: int) -> float:
+    plot_width = CHART_WIDTH - CHART_LEFT - CHART_RIGHT
+    return CHART_LEFT + (index / last_index) * plot_width
+
+
+def _chart_y(value: float, min_value: float, max_value: float) -> float:
+    plot_height = CHART_HEIGHT - CHART_TOP - CHART_BOTTOM
+    if max_value == min_value:
+        return CHART_TOP + plot_height / 2
+    return CHART_TOP + ((max_value - value) / (max_value - min_value)) * plot_height
+
+
+def _format_pct_tick(value: float) -> str:
+    return f"{value * 100:.1f}%"
+
+
+def _date_label(value: str) -> str:
+    return value.split("T", maxsplit=1)[0].split(" ", maxsplit=1)[0]
 
 
 def _render_config_form(

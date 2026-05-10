@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -59,6 +60,83 @@ def _pct(value: object) -> str:
     return f"{float(value) * 100:.1f}"
 
 
+def _insert_recommendation_copy(
+    db_path: Path,
+    merchant_id: str,
+    *,
+    computed_at: str,
+    **overrides: object,
+) -> None:
+    conn = get_connection(db_path)
+    try:
+        latest = conn.execute(
+            """
+            SELECT *
+            FROM price_recommendations
+            WHERE merchant_id = ?
+            ORDER BY computed_at DESC, id DESC
+            LIMIT 1
+            """,
+            (merchant_id,),
+        ).fetchone()
+        assert latest is not None
+        cursor = conn.execute(
+            """
+            INSERT INTO refresh_runs (status, started_at, completed_at, processed, total)
+            VALUES ('completed', ?, ?, 1, 1)
+            """,
+            (computed_at, computed_at),
+        )
+        values = {
+            "online_sell": latest["online_sell"],
+            "in_mail_buy": latest["in_mail_buy"],
+            "in_store_buy": latest["in_store_buy"],
+            "electronic_buy": latest["electronic_buy"],
+            "ebay_sell_pct": latest["ebay_sell_pct"],
+            "ebay_confidence": latest["ebay_confidence"],
+            "no_data": latest["no_data"],
+            "formula_breakdown_json": latest["formula_breakdown_json"],
+            "config_snapshot_json": latest["config_snapshot_json"],
+        }
+        values.update(overrides)
+        conn.execute(
+            """
+            INSERT INTO price_recommendations (
+                merchant_id,
+                refresh_run_id,
+                online_sell,
+                in_mail_buy,
+                in_store_buy,
+                electronic_buy,
+                ebay_sell_pct,
+                ebay_confidence,
+                no_data,
+                formula_breakdown_json,
+                config_snapshot_json,
+                computed_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                merchant_id,
+                cursor.lastrowid,
+                values["online_sell"],
+                values["in_mail_buy"],
+                values["in_store_buy"],
+                values["electronic_buy"],
+                values["ebay_sell_pct"],
+                values["ebay_confidence"],
+                values["no_data"],
+                values["formula_breakdown_json"],
+                values["config_snapshot_json"],
+                computed_at,
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     app = create_app(_seeded_db(tmp_path))
     client = TestClient(app)
@@ -111,6 +189,94 @@ def test_merchant_detail_route_returns_200(tmp_path: Path) -> None:
         response.text
     )
     assert "Edit config" in response.text
+    assert "Price History" in response.text
+    assert (
+        "Recommendation history from saved tool outputs. This does not represent prices "
+        "actually published or used outside the tool."
+    ) in response.text
+
+
+def test_price_history_chart_renders_with_two_recommendations(tmp_path: Path) -> None:
+    db_path = _seeded_db(tmp_path)
+    _insert_recommendation_copy(
+        db_path,
+        "home_depot",
+        computed_at="2026-01-01T00:00:00Z",
+        online_sell=0.86,
+        in_mail_buy=0.71,
+        ebay_sell_pct=0.91,
+    )
+    app = create_app(db_path)
+    client = TestClient(app)
+
+    response = client.get("/merchant/home_depot")
+
+    assert response.status_code == 200
+    assert "Recommendation history chart" in response.text
+    assert "<polyline" in response.text
+    assert "Online sell" in response.text
+    assert "In-mail buy" in response.text
+    assert "eBay sell" in response.text
+
+
+def test_price_history_empty_state_with_single_recommendation(tmp_path: Path) -> None:
+    app = create_app(_seeded_db(tmp_path))
+    client = TestClient(app)
+
+    response = client.get("/merchant/home_depot")
+
+    assert response.status_code == 200
+    assert "History chart will appear after two recommendations exist." in response.text
+    assert "Recommendation History" in response.text
+
+
+def test_price_history_chart_handles_missing_values(tmp_path: Path) -> None:
+    db_path = _seeded_db(tmp_path)
+    conn = get_connection(db_path)
+    try:
+        config_snapshot = conn.execute(
+            """
+            SELECT config_snapshot_json
+            FROM price_recommendations
+            WHERE merchant_id = ?
+            ORDER BY computed_at DESC, id DESC
+            LIMIT 1
+            """,
+            ("home_depot_estore_credit",),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert config_snapshot is not None
+    snapshot = json.loads(str(config_snapshot["config_snapshot_json"]))
+    snapshot["in_mail_eligible"] = False
+    _insert_recommendation_copy(
+        db_path,
+        "home_depot_estore_credit",
+        computed_at="2026-01-01T00:00:00Z",
+        in_mail_buy=None,
+        ebay_sell_pct=None,
+        config_snapshot_json=json.dumps(snapshot),
+    )
+    app = create_app(db_path)
+    client = TestClient(app)
+
+    response = client.get("/merchant/home_depot_estore_credit")
+
+    assert response.status_code == 200
+    assert "Recommendation history chart" in response.text
+    assert "Not offered" in response.text
+
+
+def test_price_history_copy_stays_recommendation_scoped(tmp_path: Path) -> None:
+    app = create_app(_seeded_db(tmp_path))
+    client = TestClient(app)
+
+    response = client.get("/merchant/home_depot")
+
+    assert response.status_code == 200
+    assert "Recommendation history from saved tool outputs." in response.text
+    assert "accepted price" not in response.text
+    assert "operator action" not in response.text
 
 
 def test_merchant_config_page_loads_with_percent_values(tmp_path: Path) -> None:
