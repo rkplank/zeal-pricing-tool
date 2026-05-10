@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from math import isfinite
 from urllib.parse import parse_qsl
 
 from fastapi import APIRouter, HTTPException, Request
@@ -164,10 +165,10 @@ def build_price_history_chart(history_desc: list[RecommendationSnapshot]) -> Pri
         )
     history = list(reversed(history_desc))
     values = [
-        value
+        numeric_value
         for snapshot in history
         for field, _, _ in CHART_CHANNELS
-        if (value := getattr(snapshot, field)) is not None
+        if (numeric_value := _chart_value(getattr(snapshot, field))) is not None
     ]
     if not values:
         return PriceHistoryChart(
@@ -183,23 +184,33 @@ def build_price_history_chart(history_desc: list[RecommendationSnapshot]) -> Pri
         ChartTick(label=_format_pct_tick(value), y=_chart_y(value, min_value, max_value))
         for value in (max_value, (min_value + max_value) / 2, min_value)
     ]
+    series = [
+        series
+        for field, label, color in CHART_CHANNELS
+        if (
+            series := _build_chart_series(
+                history,
+                field=field,
+                label=label,
+                color=color,
+                min_value=min_value,
+                max_value=max_value,
+            )
+        )
+        is not None
+    ]
+    if not series:
+        return PriceHistoryChart(
+            has_chart=False,
+            series=[],
+            y_ticks=[],
+            first_label="",
+            last_label="",
+            empty_message="History chart will appear after two usable points exist.",
+        )
     return PriceHistoryChart(
         has_chart=True,
-        series=[
-            series
-            for field, label, color in CHART_CHANNELS
-            if (
-                series := _build_chart_series(
-                    history,
-                    field=field,
-                    label=label,
-                    color=color,
-                    min_value=min_value,
-                    max_value=max_value,
-                )
-            )
-            is not None
-        ],
+        series=series,
         y_ticks=y_ticks,
         first_label=_date_label(history[0].computed_at),
         last_label=_date_label(history[-1].computed_at),
@@ -229,7 +240,7 @@ def _build_chart_series(
     current: list[str] = []
     last_index = len(history) - 1
     for index, snapshot in enumerate(history):
-        value = getattr(snapshot, field)
+        value = _chart_value(getattr(snapshot, field))
         if value is None:
             if len(current) >= 2:
                 segments.append(ChartSegment(points=" ".join(current)))
@@ -243,6 +254,15 @@ def _build_chart_series(
     if not segments:
         return None
     return PriceHistorySeries(label=label, color=color, segments=segments)
+
+
+def _chart_value(value: object) -> float | None:
+    if not isinstance(value, int | float):
+        return None
+    numeric_value = float(value)
+    if not isfinite(numeric_value):
+        return None
+    return numeric_value
 
 
 def _chart_x(index: int, last_index: int) -> float:
@@ -262,7 +282,9 @@ def _format_pct_tick(value: float) -> str:
 
 
 def _date_label(value: str) -> str:
-    return value.split("T", maxsplit=1)[0].split(" ", maxsplit=1)[0]
+    if not value:
+        return "Unknown date"
+    return str(value).split("T", maxsplit=1)[0].split(" ", maxsplit=1)[0] or "Unknown date"
 
 
 def _render_config_form(

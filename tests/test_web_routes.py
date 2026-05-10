@@ -4,9 +4,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from zeal.db.connection import apply_schema, get_connection
+from zeal.db.repositories import RecommendationSnapshot
 from zeal.db.seed import BASELINE_FIXTURE, seed_demo_data
 from zeal.ingestion.ebay_client import SyntheticEbayClient
 from zeal.web.app import create_app
+from zeal.web.routes.merchant import build_price_history_chart
 
 
 def _seeded_db(tmp_path: Path) -> Path:
@@ -137,6 +139,30 @@ def _insert_recommendation_copy(
         conn.close()
 
 
+def _snapshot(
+    computed_at: str,
+    *,
+    online_sell: float | None = None,
+    in_mail_buy: float | None = None,
+    ebay_sell_pct: float | None = None,
+) -> RecommendationSnapshot:
+    return RecommendationSnapshot(
+        id=1,
+        merchant_id="test",
+        refresh_run_id=1,
+        online_sell=online_sell,
+        in_mail_buy=in_mail_buy,
+        in_store_buy=None,
+        electronic_buy=None,
+        ebay_sell_pct=ebay_sell_pct,
+        ebay_confidence="none",
+        no_data=False,
+        formula_breakdown={},
+        config_snapshot={},
+        computed_at=computed_at,
+    )
+
+
 def test_pricing_list_route_returns_200(tmp_path: Path) -> None:
     app = create_app(_seeded_db(tmp_path))
     client = TestClient(app)
@@ -232,6 +258,31 @@ def test_price_history_empty_state_with_single_recommendation(tmp_path: Path) ->
     assert response.status_code == 200
     assert "History chart will appear after two recommendations exist." in response.text
     assert "Recommendation History" in response.text
+
+
+def test_price_history_chart_handles_unexpected_timestamps() -> None:
+    chart = build_price_history_chart(
+        [
+            _snapshot("", online_sell=0.82),
+            _snapshot("not-a-normal-timestamp", online_sell=0.84),
+        ]
+    )
+
+    assert chart.has_chart is True
+    assert chart.first_label == "not-a-normal-timestamp"
+    assert chart.last_label == "Unknown date"
+
+
+def test_price_history_chart_empty_state_when_no_channel_has_two_points() -> None:
+    chart = build_price_history_chart(
+        [
+            _snapshot("2026-01-02T00:00:00Z", online_sell=0.82),
+            _snapshot("2026-01-01T00:00:00Z", ebay_sell_pct=0.91),
+        ]
+    )
+
+    assert chart.has_chart is False
+    assert chart.empty_message == "History chart will appear after two usable points exist."
 
 
 def test_price_history_chart_handles_missing_values(tmp_path: Path) -> None:
