@@ -58,7 +58,10 @@ Versions are floors, not ceilings. We pin in `pyproject.toml`.
 ```
 zeal-pricing-tool/
 ├── README.md
+├── CLAUDE.md
+├── AGENTS.md
 ├── pyproject.toml
+├── uv.lock
 ├── .python-version             # 3.12
 ├── .env.example
 ├── .gitignore
@@ -66,74 +69,98 @@ zeal-pricing-tool/
 │   ├── pricing_algorithm.md
 │   ├── architecture.md
 │   ├── decisions_log.md
-│   └── spreadsheet_recon.md
+│   ├── spreadsheet_recon.md
+│   ├── credential_day_validation_plan.md
+│   ├── dashboard_usability_review_plan.md
+│   ├── operator_demo_script.md
+│   ├── historical_pricing_findings.md
+│   └── historical_pricing_analysis.md
 ├── src/zeal/
 │   ├── __init__.py
-│   ├── config.py
-│   ├── cli.py                  # `zeal serve`, `zeal refresh`, `zeal seed`, `zeal init-db`
+│   ├── config.py               # ZealConfig; reads ZEAL_EBAY_MODE, EBAY_* from env
+│   ├── cli.py                  # `zeal serve`, `zeal seed`, `zeal seed-demo`, `zeal init-db`, `zeal smoke-ebay`
 │   ├── db/
 │   │   ├── __init__.py
-│   │   ├── schema.sql
-│   │   ├── connection.py
-│   │   └── migrations/
+│   │   ├── schema.sql          # canonical schema; apply via apply_schema()
+│   │   ├── connection.py       # get_connection(), apply_schema()
+│   │   ├── repositories.py     # all query and mutation functions
+│   │   └── seed.py             # seeds baseline fixture + synthetic recommendations
 │   ├── models/
-│   │   ├── merchant.py
-│   │   ├── pricing.py
-│   │   ├── ebay.py
-│   │   └── competitor.py
+│   │   ├── merchant.py         # MerchantConfig, MerchantRecord
+│   │   ├── pricing.py          # GlobalConstants, CompetitorAggregate, PriceRecommendation
+│   │   ├── ebay.py             # EbaySoldListing, EbayObservation, EbaySummary
+│   │   └── competitor.py       # CompetitorSource, CompetitorObservation
 │   ├── ingestion/
 │   │   ├── __init__.py
-│   │   ├── ebay_client.py
-│   │   ├── refresh.py          # on-demand refresh orchestrator
-│   │   └── competitor/
-│   │       ├── __init__.py
-│   │       ├── base.py         # CompetitorSource protocol
-│   │       ├── cardcash.py     # v1 single source
-│   │       └── refresh.py      # competitor refresh helper
+│   │   ├── ebay_client.py      # EbayClient protocol + SyntheticEbayClient
+│   │   ├── ebay_client_factory.py  # create_ebay_client(): synthetic or live by config
+│   │   ├── ebay_errors.py      # EbayAuthError, EbayRateLimitError, etc.
+│   │   ├── ebay_marketplace_insights_client.py  # live Marketplace Insights client
+│   │   ├── ebay_oauth.py       # EbayTokenManager; OAuth2 client-credentials flow
+│   │   └── refresh.py          # run_refresh() orchestrator; per-merchant eBay → recs loop
+│   │   # Note: automated competitor scraper (CardCash) is NOT yet implemented.
+│   │   # Competitor data schema is present; scraper is a planned v2 addition.
 │   ├── pricing/
 │   │   ├── __init__.py
-│   │   ├── ebay_average.py     # spec §6.3
-│   │   ├── listing_filter.py   # spec §6.2; pure functions
-│   │   ├── competitor_aggregate.py  # spec §7
-│   │   ├── confidence.py       # spec §6.4 and §7.5
-│   │   ├── blending.py         # spec §5.7; engine structure for v2
-│   │   └── engine.py           # spec §5; the four channel formulas
+│   │   ├── ebay_average.py     # compute_ebay_average() — spec §6.3
+│   │   ├── listing_filter.py   # filter_listings() — spec §6.2; pure
+│   │   ├── competitor_aggregate.py  # aggregate_competitor_observations() — spec §7
+│   │   ├── confidence.py       # score_confidence() — spec §6.4
+│   │   ├── blending.py         # blend_values(); used when ebay_weight < 1.0
+│   │   └── engine.py           # compute_prices() — spec §5; four channel formulas
 │   ├── web/
 │   │   ├── __init__.py
-│   │   ├── app.py              # FastAPI app, runs background refresh task
+│   │   ├── app.py              # FastAPI app factory; lifespan wiring
 │   │   ├── routes/
 │   │   │   ├── __init__.py
-│   │   │   ├── dashboard.py    # GET / — spreadsheet-style list
-│   │   │   ├── merchant.py     # GET /merchant/{id} — detail
+│   │   │   ├── dashboard.py    # GET / — pricing list
+│   │   │   ├── merchant.py     # GET /merchant/{id}, GET/POST /merchant/{id}/config
 │   │   │   └── refresh.py      # POST /refresh, GET /refresh/status
+│   │   ├── templating.py       # Jinja2 env + custom filters (pct, pp, channel, datetime, …)
 │   │   ├── templates/
-│   │   │   ├── base.html
-│   │   │   ├── dashboard.html
-│   │   │   ├── merchant_detail.html
+│   │   │   ├── base.html       # shared layout; HTMX loaded via CDN
+│   │   │   ├── dashboard.html  # pricing list table
+│   │   │   ├── merchant_detail.html  # detail: cards, chart, breakdown, observations
+│   │   │   ├── merchant_config.html  # config edit form
 │   │   │   └── partials/
 │   │   │       ├── breakdown.html
-│   │   │       ├── refresh_progress.html
-│   │   │       └── competitor_panel.html
+│   │   │       ├── competitor_panel.html
+│   │   │       ├── refresh_idle.html
+│   │   │       └── refresh_running.html
 │   │   └── static/
-│   │       ├── style.css
-│   │       └── htmx.min.js
+│   │       └── style.css
 │   └── jobs/                   # placeholder; v1 has no scheduled jobs
 ├── tests/
 │   ├── conftest.py
-│   ├── test_pricing_engine_baseline.py
+│   ├── test_pricing_engine.py
+│   ├── test_pricing_engine_baseline.py  # 281 golden records at ±0.001
 │   ├── test_ebay_average.py
 │   ├── test_confidence.py
 │   ├── test_listing_filter.py
-│   ├── test_blending.py        # exercises engine paths inactive in v1
+│   ├── test_pricing_blending.py
 │   ├── test_competitor_aggregate.py
-│   ├── test_parser.py
+│   ├── test_spreadsheet_parser.py
+│   ├── test_models_merchant.py
+│   ├── test_config.py
+│   ├── test_db_schema.py
+│   ├── test_repositories.py
+│   ├── test_ebay_client_factory.py
+│   ├── test_ebay_marketplace_insights_client.py
+│   ├── test_ebay_oauth.py
+│   ├── test_refresh_orchestrator.py
+│   ├── test_refresh_routes.py
+│   ├── test_web_routes.py
+│   ├── test_template_filters.py
+│   ├── test_seed_demo.py
+│   ├── test_smoke_ebay_cli.py
+│   ├── test_historical_spreadsheet_recon.py
 │   └── fixtures/
 │       └── spreadsheet_baseline.json
 ├── scripts/
-│   ├── seed_from_spreadsheet.py
-│   └── launch_dashboard.ps1
-└── data/
-    └── .gitkeep
+│   ├── extract_baseline.py
+│   ├── historical_spreadsheet_recon.py
+│   └── spreadsheet_parser.py
+└── data/                       # gitignored; runtime SQLite lives here
 ```
 
 The split between `ingestion`, `pricing`, and `web` matters. The algorithm code (`pricing/`) has zero dependencies on web framework, database, or HTTP clients, which means it is testable and can be reused in a future website integration without rework. `listing_filter.py`, `competitor_aggregate.py`, and `blending.py` live in `pricing/` because they are pure functions with no I/O.
@@ -164,7 +191,7 @@ Four components, with explicit dependencies:
    ┌──────────────────┐   ┌──────────────────┐
    │  Ingestion        │   │  Pricing Engine   │
    │  (ingestion/)     │──▶│  (pricing/)       │
-   │  eBay + CardCash  │   │  pure functions   │
+   │  eBay (live/syn.) │   │  pure functions   │
    └────────┬──────────┘   └─────────┬─────────┘
             │                        │
             ▼                        ▼
@@ -181,7 +208,7 @@ Four components, with explicit dependencies:
 
 1. **Pricing Engine** — pure functions, no I/O. Reads merchant config, eBay observations, and competitor aggregates from arguments; returns `PriceRecommendation` objects with per-channel breakdowns. The formulas from spec §5 live here. The engine's input contract includes `ebay_weight` and a `CompetitorAggregate`; in v1 these are passed but `ebay_weight = 1.0` so the recommendation equals the eBay-only path output. Heavily tested. **Forward-compatibility note:** because this layer has no FastAPI or SQLite imports, a future website integration can import `compute_prices` directly without dragging the dashboard infrastructure with it.
 
-2. **Ingestion** — eBay client (Marketplace Insights API wrapper) and competitor scraper (CardCash). Both are invoked from the background refresh task. The eBay client paginates, filters listings per spec §6.2, and writes to `ebay_observations` with `validity_status` and `exclusion_reason`. The CardCash scraper writes to `competitor_observations`. Both are idempotent and safe to re-run.
+2. **Ingestion** — eBay client (Marketplace Insights API wrapper, or `SyntheticEbayClient` when `ZEAL_EBAY_MODE=synthetic`) and the refresh orchestrator. The eBay client paginates, filters listings per spec §6.2, and writes to `ebay_observations` with `validity_status` and `exclusion_reason`. An automated competitor scraper is not yet implemented; competitor observations can be inserted manually or will be added by a v2 scraper. The competitor data schema and aggregation logic are present.
 
 3. **Dashboard (FastAPI)** — the operator UI plus refresh orchestration. Two screens (list view, merchant detail) plus three control routes (`POST /refresh`, `GET /refresh/status`, `GET /merchant/{id}`). The refresh task runs as a FastAPI background task in the same process; status is tracked in the `refresh_runs` table and exposed via the status endpoint.
 
@@ -198,16 +225,18 @@ Refresh is on-demand only. There is no scheduled job in v1.
 1. Browser issues `POST /refresh`. Server checks `refresh_runs` for an in-flight run; if one exists, returns 409. Otherwise creates a row in `refresh_runs` with status `running` and dispatches a FastAPI background task.
 2. Browser begins polling `GET /refresh/status` every 2 seconds. The status response is `{state, processed, total, started_at, error?}`.
 3. The background task iterates active merchants:
-   - For each merchant: query eBay Marketplace Insights API for sold listings matching the merchant's regex, last 90 days, US only.
+   - For each merchant: query eBay Marketplace Insights API for sold listings matching the merchant's regex, last 90 days, US only. In synthetic mode, returns seeded data without network calls.
    - For each listing: apply validity filters (spec §6.2), upsert into `ebay_observations` (deduped by `listing_id`), recording `validity_status` and `exclusion_reason`.
    - Compute `ebay_sell_pct` per spec §6.3, eBay confidence per spec §6.4. Upsert one row in `ebay_summary` keyed by `(merchant_id, today)`.
-   - Compute the recommendation by calling `compute_prices(ebay_sell_pct, ebay_confidence, competitor=None_or_aggregate, config, constants)`. v1 always passes `ebay_weight = 1.0` (read from merchant config) and the recommendation equals the eBay-only output. Insert into `price_recommendations`.
+   - Compute the recommendation by calling `compute_prices(ebay_sell_pct, ebay_confidence, competitor=CompetitorAggregate(), config, constants)`. v1 always passes `ebay_weight = 1.0` (read from merchant config) and the recommendation equals the eBay-only output. Insert into `price_recommendations`.
    - Update the `refresh_runs` row's `processed` count.
-4. Separately, the task also refreshes competitor data (CardCash) for the active merchants. Competitor refresh runs after eBay is complete to keep the progress signal interpretable. Each merchant's CardCash scrape writes to `competitor_observations`; failures log and skip that merchant.
-5. When all merchants are processed (or an unrecoverable error occurs): mark `refresh_runs` row `completed` (or `failed`/`partial`), set `completed_at`. The status endpoint surfaces this and the browser stops polling.
-6. The dashboard re-renders the list view to show the new recommendations.
+   - Merchants with `online_sell_override` set skip the eBay fetch and compute directly from the override value.
+4. When all merchants are processed (or an unrecoverable error occurs): mark `refresh_runs` row `completed` (or `failed`/`partial`), set `completed_at`. The status endpoint surfaces this and the browser stops polling.
+5. The dashboard re-renders the list view to show the new recommendations.
 
-**Rate limiting:** ~300 merchants x ~3 paginated requests each is ~900 calls per refresh. The per-day call budget depends on the API tier granted by eBay; this is pending approval (see §12 Q1). Until confirmed limits are known, a conservative 100ms sleep between calls will be used as a starting point and adjusted once the tier is established. CardCash adds 500-1000ms between requests because the operator may run multiple refreshes per day and the per-day total should still stay low.
+**Note — competitor refresh:** an automated competitor scraper is not yet implemented. Competitor data is not collected during refresh in v1. The schema and aggregation logic are present for future use.
+
+**Rate limiting (eBay):** ~300 merchants x ~3 paginated requests each is ~900 calls per refresh. The per-day call budget depends on the API tier granted by eBay; this is pending approval (see §12 Q1). A 100ms sleep between calls is used as a starting point.
 
 **Failure handling:** on per-merchant failure, log and skip. The merchant's most recent prior recommendation remains the latest known. The list view marks merchants whose latest recommendation is from a prior refresh — not a hard error, just a freshness indicator.
 
@@ -453,77 +482,83 @@ v1 includes a narrow merchant config editor for one merchant at a time. It edits
 
 The algorithm is in `src/zeal/pricing/engine.py`. Pure functions, no side effects, no I/O. Blending logic lives in `pricing/blending.py`; competitor aggregation in `pricing/competitor_aggregate.py`.
 
-```python
-from dataclasses import dataclass
-from typing import Literal, Sequence
+All types use Pydantic `BaseModel` (not `@dataclass`). Key types in `src/zeal/models/` and their actual fields:
 
-@dataclass(frozen=True)
-class MerchantConfig:
+```python
+# src/zeal/models/merchant.py
+class MerchantConfig(BaseModel):
+    merchant_id: str
+    display_name: str
+    tier: Literal["T24", "C", "Z", "NC"]
     in_store_margin: float
     in_mail_margin: float
-    e_bonus: float | None
     ebay_differential: float
     in_store_eligible: bool
     in_mail_eligible: bool
     electronic_eligible: bool
+    merch_credit_variant: bool
+    e_bonus: float | None = None
     online_sell_override: float | None = None
     electronic_buy_override: float | None = None
-    ebay_weight: float = 1.0
+    ebay_weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    notes: str | None = None
 
-@dataclass(frozen=True)
-class CompetitorAggregate:
-    """Per-channel competitor-derived input, aggregated per spec §7.4. None if unavailable."""
-    online_sell: float | None
-    in_mail_buy: float | None
-    electronic_buy: float | None
-    sources_contributing: Sequence[str]
+# src/zeal/models/pricing.py
+class GlobalConstants(BaseModel):
+    ebay_sale_costs: float
+    paypal_sell_costs: float
+    ebay_postage_costs: float
+    online_store_postage_costs: float
+    online_sell_bonus_competitive: float
+    online_sell_bonus_zen_nocomp: float
+    in_store_bad_debt: float
+    in_mail_bad_debt: float
+    online_bad_debt: float
+    competitor_electronic_markdown: float = 0.05
 
-@dataclass(frozen=True)
-class BreakdownStep:
-    """One step in the formula breakdown rendered on merchant detail."""
+class CompetitorAggregate(BaseModel):
+    online_sell: float | None = None
+    in_mail_buy: float | None = None
+    electronic_buy: float | None = None
+    sources_contributing: Sequence[str] = ()
+
+class BreakdownStep(BaseModel):
     label: str
     value: float | str
     sign: Literal["+", "-", "=", "*", "blend"]
 
-@dataclass(frozen=True)
-class ChannelResult:
+class ChannelResult(BaseModel):
     final_value: float | Literal["No", "No Data"]
     ebay_only_value: float | Literal["No", "No Data"]
-    competitor_only_value: float | None
-    breakdown: Sequence[BreakdownStep]
+    competitor_only_value: float | None = None
+    breakdown: Sequence[BreakdownStep] = Field(default_factory=tuple)
 
-@dataclass(frozen=True)
-class PriceRecommendation:
+class PriceRecommendation(BaseModel):
     online_sell: ChannelResult
     in_mail_buy: ChannelResult
     in_store_buy: ChannelResult
     electronic_buy: ChannelResult
-    confidence: Literal["high", "medium", "low", "none"]
     no_data: bool
+    confidence: Literal["high", "medium", "low", "none"]
+```
 
-@dataclass(frozen=True)
-class GlobalConstants:
-    paypal_sell_costs: float
-    online_store_postage_costs: float
-    in_store_bad_debt: float
-    in_mail_bad_debt: float
-    competitor_electronic_markdown: float
+The `compute_prices()` signature:
 
+```python
 def compute_prices(
     ebay_sell_pct: float | None,
     ebay_confidence: Literal["high", "medium", "low", "none"],
     competitor: CompetitorAggregate,
     config: MerchantConfig,
     constants: GlobalConstants,
-) -> PriceRecommendation:
-    ...
+) -> PriceRecommendation: ...
 ```
 
-The body of `compute_prices` implements `pricing_algorithm.md` §5; the spec is the source of truth. Do not duplicate the formula logic here.
+The body implements `pricing_algorithm.md` §5; the spec is the source of truth. Do not duplicate the formula logic here.
 
 In v1 the dashboard always passes `config.ebay_weight = 1.0`, so the recommendation equals the eBay-only path output regardless of `competitor` content. The engine still computes and returns competitor-only and blended values internally; they are unit-tested but not surfaced to the operator. v2 introduces UI to vary `ebay_weight` per merchant.
 
-**Test strategy:** the file `tests/fixtures/spreadsheet_baseline.json` continues to verify the faithful-port property (281 records, `ebay_weight = 1.0`). `tests/fixtures/blending_cases.json` verifies engine math at non-1.0 weights as a v2 guardrail. `tests/fixtures/exclusion_cases.json` covers extended validity filter behavior (spec §6.2). All loop the engine and assert outputs match to within +/-0.001.
+**Test strategy:** the file `tests/fixtures/spreadsheet_baseline.json` verifies the faithful-port property (281 records, `ebay_weight = 1.0`). The 493-test suite covers engine paths, confidence, listing filter, blending, repositories, routes, and CLI. Golden tests assert outputs match to within +/-0.001.
 
 ---
 
@@ -538,17 +573,17 @@ One-time, ~20 minutes:
 3. Install Git for Windows.
 4. Clone the repo to `C:\zeal-pricing-tool`.
 5. `uv sync` — installs dependencies.
-6. Create `.env` from `.env.example` and fill in eBay API keys.
-7. `python -m zeal.cli init-db` — creates the SQLite file at `data/zeal.db`.
-8. `python -m zeal.cli seed` — loads merchant data from the spreadsheet.
-9. Copy `scripts/launch_dashboard.ps1` to a desktop shortcut.
+6. Create `.env` from `.env.example`. Leave `ZEAL_EBAY_MODE=synthetic` until production Marketplace Insights access is confirmed.
+7. `uv run python -m zeal.cli init-db` — creates the SQLite file at `data/zeal.db`.
+8. `uv run python -m zeal.cli seed` — loads merchant data from the baseline fixture.
+9. `uv run python -m zeal.cli serve` — starts the dashboard at `http://127.0.0.1:8000`.
 
 ### 9.2 Daily use
 
-- Operator double-clicks the desktop shortcut.
-- The launcher starts the FastAPI server in a console window (kept open while the dashboard is in use) and opens the default browser to `localhost:8000`.
-- Operator clicks "Refresh now" when he wants new pricing data, watches the progress bar, then reviews the recommendations.
-- When done, operator closes the console window. Closing only the browser leaves the server running, which is harmless but wastes a process.
+- Run `uv run python -m zeal.cli serve` in a terminal window (keep it open while using the dashboard).
+- Open `http://127.0.0.1:8000` in a browser.
+- Operator clicks "Refresh now" when he wants new pricing data (live mode only), watches the progress bar, then reviews the saved recommendations.
+- When done, close the terminal window.
 
 ### 9.3 Updates
 
@@ -556,8 +591,8 @@ When new code lands on `main`:
 
 1. Operator (or developer) runs `git pull` in the repo directory.
 2. Run `uv sync` if dependencies changed.
-3. Run `python -m zeal.cli migrate` if schema changed (no-op if not).
-4. Restart the dashboard (close console, double-click shortcut).
+3. If the schema changed, apply the migration SQL manually or re-seed into a fresh DB.
+4. Restart the dashboard.
 
 Manual process. Acceptable for one user.
 
@@ -586,46 +621,29 @@ Three stepping-stone versions after Phase 1, each producing something demoable. 
 
 Pure-function pricing engine, Pydantic models, SQLite schema, spreadsheet parser, golden test against 281 baseline merchants. All tests passing at +/-0.001 tolerance. See repo `main` branch (PR #2, merged).
 
-### Phase 2 — Read-only viewer with synthetic data
+### Phases 1–3 — COMPLETE
 
-Goal: the dashboard structure exists and renders, before any live ingestion is wired up.
+- Phase 1: pure-function pricing engine, Pydantic models, SQLite schema, spreadsheet parser, 281-record golden baseline tests.
+- Phase 2: FastAPI dashboard skeleton, pricing list + merchant detail views, synthetic seeder, on-demand refresh button, config editor.
+- Phase 3: live eBay Marketplace Insights client, OAuth flow, listing filter, refresh orchestrator, smoke-ebay CLI, HTMX progress bar. Live eBay refresh is gated on production Marketplace Insights entitlement (currently blocked — see §12 Q1).
 
-- FastAPI app skeleton, two routes (`GET /`, `GET /merchant/{id}`)
-- Templates for both screens
-- Spreadsheet-style list view rendering data from `price_recommendations`
-- Merchant detail rendering breakdown, history chart, etc.
-- Seeder script extended to write a fake "recommendation" row per merchant from the spreadsheet's computed values, so the UI has data to render without eBay access
-- `zeal serve` CLI command, launcher script, desktop shortcut workflow validated
+Current state: all of the above is implemented and tested. The tool operates in synthetic mode (seeded spreadsheet-baseline recommendations). Dashboard includes pricing list, merchant detail (recommendation cards, price history chart, formula breakdown, eBay observations, competitor reference panel), narrow config editor, and source/confidence badges.
 
-**Acceptance:** operator can open the dashboard, scroll through all merchants, click any one to see detail. No refresh button yet; the data is the seeded synthetic recommendations.
+### Phase 4 — CardCash competitor scraper (planned)
 
-### Phase 3 — On-demand eBay refresh
+Goal: automated competitor data collection.
 
-Goal: real eBay data, real refresh button, real progress bar.
+- CardCash scraper (`ingestion/competitor/`) — not yet built
+- Competitor refresh integrated into the background refresh task
+- Competitor observations auto-populate the competitor reference panel
 
-- eBay Marketplace Insights API client (prerequisite: API access approved)
-- Listing filter (extended validity rules per spec §6.2)
-- Refresh orchestrator running as FastAPI background task
-- `POST /refresh`, `GET /refresh/status` routes
-- Progress bar in list view, polling every 2s
-- Delta-from-last-run and max-abs-delta-over-N columns and sorting
+The competitor data schema and aggregation logic are already in place; this phase adds the collection mechanism only.
 
-**Acceptance:** operator clicks "Refresh now," watches the progress bar, sees updated recommendations sorted by movement. Competitor panel on merchant detail shows "no competitor data yet."
-
-### Phase 4 — CardCash competitor scraper
-
-Goal: competitor data flowing.
-
-- CompetitorSource protocol (`ingestion/competitor/base.py`)
-- CardCash scraper (`ingestion/competitor/cardcash.py`)
-- Competitor refresh integrated into the background refresh task (runs after eBay refresh completes)
-- Competitor reference panel on merchant detail
-
-**Acceptance:** after a refresh, CardCash rates appear on the merchant detail page for at least 50 merchants. The recommendation is unchanged — competitor data is reference-only.
+**Acceptance:** after a refresh, CardCash rates appear on the merchant detail page for active merchants. The recommendation is unchanged — competitor data is reference-only in v1.
 
 ### Phase 5 — Polish and stabilize
 
-Open-ended: bug fixes from operator feedback, UI tweaks, edge case handling. Begins after Phase 4 has been used in real workflow for a week+.
+Open-ended: bug fixes from operator feedback, UI tweaks, edge case handling. Begins after Phase 4 has been used in real workflow.
 
 After Phase 5: stabilize. v2 (per `pricing_algorithm.md` §11) starts only after the operator has used v1 long enough to have informed feedback on which v2 improvements are worth the effort.
 
@@ -635,7 +653,7 @@ After Phase 5: stabilize. v2 (per `pricing_algorithm.md` §11) starts only after
 
 Tracked here so the build does not get blocked on missing answers, but listed so we can resolve them as we go:
 
-- **Q1.** eBay API access status. As of 2026-05-08, eBay has not yet responded; production Marketplace Insights entitlement remains blocked because the production keyset cannot mint `buy.marketplace.insights`. Sold-listing data requires the **Marketplace Insights API**, which is a separately gated program beyond Browse API access — Browse returns active listings only and is not suitable for the eBay sell % computation. Live production validation must wait until Marketplace Insights access is enabled. Browse API fallback is not allowed. Synthetic-mode dashboard/usability review can proceed while waiting. See decisions_log.md 2026-05-05 for fallback contingencies if access is denied.
+- **Q1.** eBay API access status. As of 2026-05-10: production Marketplace Insights API access is NOT yet granted. The sandbox keyset has the `buy.marketplace.insights` scope; the production keyset does not. Awaiting eBay support. v1 currently operates in synthetic mode. Sold-listing data requires the **Marketplace Insights API** — Browse API provides active listings only and is not a valid source for the eBay sell % computation. See decisions_log.md 2026-05-05 and 2026-05-10 for fallback and waiting-state decisions.
 - **Q2.** ~~Display: percentages or dollar amounts?~~ **Resolved:** operator confirmed percentages. See decisions_log.md 2026-05-03.
 - **Q3.** Currency formatting (78.5% vs 0.785 vs $78.50/$100). Use percentages with one decimal place, matching the spreadsheet's convention.
 - **Q4.** When the operator updates `online_sell_override` for a Pattern A merchant, should the on-demand refresh skip eBay ingestion entirely for that merchant? Default: yes — no eBay calls for merchants with the override set. Saves rate-limit budget and avoids generating misleading "No Data" warnings.
@@ -676,16 +694,15 @@ All of these are tracked in the algorithm spec's v2 roadmap or are de novo impro
 
 ## 14. Acceptance criteria for the build
 
-The architecture is correctly implemented when:
+The v1 architecture (phases 1–3) is correctly implemented when:
 
 1. All algorithm spec acceptance criteria are met (per `pricing_algorithm.md` §13).
-2. The dashboard launches via the desktop shortcut and renders the list view of all active merchants.
-3. The "Refresh now" button completes a full refresh of all active merchants without manual intervention beyond the click. Progress bar updates as merchants are processed.
-4. The CardCash scraper produces observations for at least 50 merchants on a single refresh.
-5. The merchant detail page renders formula breakdown, recent eBay observations, competitor reference panel, and recommendation history chart for every merchant.
-6. The operator can complete a full review (scan list, drill into outliers, return to list) in under 30 minutes for the typical case.
-7. Test coverage on `pricing/` is 100%; on `ingestion/` is >=80%.
-8. Test coverage on `ingestion/competitor/` is >=70% (lower bar acceptable because scraper logic is environment-dependent).
-9. The repo passes `ruff check` and `pytest` cleanly.
-10. The pure-function boundary in `pricing/` is preserved: no FastAPI, SQLite, or httpx imports anywhere in the package. Verified by an import-linter rule in CI.
-11. Documentation in `docs/` reflects the as-built system.
+2. `uv run python -m zeal.cli serve` launches and renders the pricing list view of all active merchants.
+3. The merchant detail page renders recommendation cards, price history chart, formula breakdown, eBay observations (or synthetic empty state), competitor reference panel, and recommendation history for every merchant.
+4. The "Refresh now" button (live mode only) completes a full refresh of all active merchants without manual intervention beyond the click. Progress bar updates as merchants are processed. (Gated on production Marketplace Insights entitlement — see §12 Q1.)
+5. The operator can complete a full review (scan list, drill into outliers, return to list) in under 30 minutes for the typical case.
+6. The repo passes `uv run ruff check .` and `uv run pytest` cleanly.
+7. The pure-function boundary in `pricing/` is preserved: no FastAPI, SQLite, or httpx imports anywhere in `src/zeal/pricing/`. Verified by `rg "fastapi|sqlite3|httpx" src/zeal/pricing/`.
+8. Documentation in `docs/` reflects the as-built system.
+
+Criteria for Phase 4 (CardCash scraper) are tracked separately and apply after the scraper is built.

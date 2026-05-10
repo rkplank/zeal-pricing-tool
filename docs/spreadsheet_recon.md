@@ -1,5 +1,7 @@
 # Spreadsheet Reconnaissance
 
+> **Historical analysis.** Reflects spreadsheet state at time of writing; not a live spec.
+
 Working notes from a structured walkthrough of `GiftCardPricingData_2025.xlsx` using Claude for Excel. This doc captures the spreadsheet's actual encoding and structure, which is the input to the baseline-extraction parser.
 
 **Status:** Reconnaissance complete.

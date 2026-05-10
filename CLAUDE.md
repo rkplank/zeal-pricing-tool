@@ -17,29 +17,27 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-05-09, latest verified commit
-`c9fe166c0ffb42db08a56208d5b3bf5b9e4ae602`:
+Current status as of 2026-05-10, latest verified commit `1d31eb0`:
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
   within +/-0.001.
 - The FastAPI dashboard is implemented with seeded/synthetic recommendations,
-  pricing list, merchant detail pages, formula breakdowns, refresh controls,
-  status display, and narrow merchant config editing.
+  pricing list, merchant detail pages (including price history chart and formula
+  breakdown), refresh controls, status display, and narrow merchant config
+  editing.
 - The live eBay Marketplace Insights path exists behind configuration:
   live/synthetic client factory, OAuth flow, Marketplace Insights client,
   `zeal smoke-ebay`, refresh orchestrator, and mocked tests.
-- Production validation is blocked. The production eBay keyset cannot mint
-  `buy.marketplace.insights`; eBay has not yet responded with production
-  Marketplace Insights entitlement.
-- Synthetic dashboard polish and documentation alignment are complete while
-  waiting for eBay.
+- **Production Marketplace Insights API access is NOT yet granted.** The sandbox
+  keyset has the `buy.marketplace.insights` scope; the production keyset does
+  not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
 
-Do not run live eBay validation until production `buy.marketplace.insights` is
-enabled. Do not fall back to Browse API; Browse does not provide sold-listing
-data and is not an acceptable substitute for Marketplace Insights.
+Do not run live eBay validation while production Marketplace Insights
+entitlement is blocked. Browse API provides active listings only; it is not a
+valid source for sold-listing data.
 
 ## Working principles
 
@@ -103,7 +101,8 @@ Cross-layer imports flow inward: `web` and `ingestion` may import from `pricing`
   requires it.
 - Do not run live eBay validation while production Marketplace Insights
   entitlement is blocked.
-- Do not use Browse API fallback for sold listings.
+- Do not use Browse API for sold listings. Browse API provides active listings
+  only; sold-listing data requires Marketplace Insights.
 - Do not put real eBay credentials in code, tests, fixtures, docs, or commit
   history.
 - Do not add automated publishing, accept/override/skip workflow, scheduled

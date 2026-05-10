@@ -1,5 +1,7 @@
 # Historical Pricing Findings
 
+> **Historical analysis.** Reflects spreadsheet state at time of writing; not a live spec.
+
 Generated from:
 
 - `docs/generated/historical_pricing_rows.json`

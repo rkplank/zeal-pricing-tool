@@ -31,12 +31,14 @@ API. Sold-listing validation remains blocked until eBay enables
 `buy.marketplace.insights` for the production Client Credential Grant Type
 scopes.
 
-## 2026-05-08 Status Note
+## 2026-05-10 Status Note
 
-As of 2026-05-08, eBay has not yet responded; production Marketplace Insights
-entitlement remains blocked. Production validation should not proceed until
-`buy.marketplace.insights` is enabled for the production keyset. Continue
-synthetic-mode dashboard usability review and documentation work while waiting.
+As of 2026-05-10: production Marketplace Insights API access is NOT yet granted.
+The sandbox keyset has the `buy.marketplace.insights` scope; the production
+keyset does not. Awaiting eBay support. v1 currently operates in synthetic mode.
+Production validation should not proceed until `buy.marketplace.insights` is
+enabled for the production keyset. Continue synthetic-mode dashboard usability
+review while waiting.
 
 ## 1. Pre-Credential Assumptions And Scope
 
