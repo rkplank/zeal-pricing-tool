@@ -97,54 +97,26 @@ indirectly via `run_refresh()` with a controlled `SyntheticEbayClient`.
 
 ---
 
-## BUG-05 — `_parse_percent()` fraction-input guard not directly tested
+## ~~BUG-05 — `_parse_percent()` fraction-input guard not directly tested~~
 
-**File:line:** `src/zeal/web/routes/merchant.py:427-429`
+**Resolved 2026-05-10 by `tests/test_web_routes.py::test_merchant_config_percent_field_accepts_human_format_and_rejects_fractions`**
 
-```python
-if 0 < percent <= 1:
-    errors[field] = "Enter human percentages like 85 or 85%, not fractions like 0.85."
-    return None
-```
-
-**Description:** The guard exists specifically to prevent a silent pricing error
-(operator enters `0.85` intending 85% but it gets stored as `0.0085`). If this
-guard regresses, the operator could silently corrupt a merchant's margin. The
-guard is not covered by the existing `test_merchant_config_invalid_percentage_is_rejected`
-test at `test_web_routes.py:428`, which only tests fully invalid input (e.g.,
-letters).
-
-**Proposed fix:** Add a test case posting `0.85` as a percent field value and
-asserting that the response has a 400 status code and the `in_store_margin`
-field has an error message mentioning "fractions."
-
-**Risk of fix:** Low. Test-only change; guard code is already in place.
-
-**Severity: HIGH** — silent pricing error if regressed. Recommend adding this
-test in Phase 4.
+**Note on audit finding:** The original claim that `test_merchant_config_invalid_percentage_is_rejected`
+"only tests fully invalid input (e.g., letters)" was incorrect — that test
+already tested `"0.85"` rejection. What was genuinely missing was explicit
+coverage of the acceptance path ("85", "85.0", "85%"). The new test pins both
+sides: acceptance (303 redirect + stored as 0.85) and rejection (400 + error text).
 
 ---
 
-## BUG-06 — `POST /refresh` synthetic-mode 409 not tested
+## ~~BUG-06 — `POST /refresh` synthetic-mode 409 not tested~~
 
-**File:line:** `src/zeal/web/routes/refresh.py:95-99`
+**Resolved — already covered by `tests/test_refresh_routes.py::test_post_refresh_in_synthetic_mode_is_blocked` (line 265)**
 
-```python
-if request.app.state.zeal_config.ebay_mode == "synthetic":
-    return HTMLResponse(
-        status_code=409,
-        content="Refresh is disabled in synthetic mode",
-    )
-```
-
-**Description:** This guard prevents accidental live refresh in synthetic mode.
-It is not covered by any test. If the guard is accidentally removed, live refresh
-could be triggered in synthetic mode.
-
-**Proposed fix:** Add a test in `test_refresh_routes.py` that posts to `/refresh`
-with `ebay_mode="synthetic"` and asserts a 409 response with the expected body.
-
-**Risk of fix:** Low. Test-only change; guard code is already in place.
+**Note on audit finding:** The original claim that this was not covered was incorrect.
+The existing test (added before the audit) already pins all three requirements:
+status 409, body text "Refresh is disabled in synthetic mode", and no new
+`refresh_runs` row created (`before["id"] == after["id"]`). No new test added.
 
 ---
 

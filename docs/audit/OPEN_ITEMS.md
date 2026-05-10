@@ -13,35 +13,22 @@ Items are grouped by urgency. Within a group, order is priority.
 
 ## 🔴 High — address before first real operator demo
 
-### OI-1: `_parse_percent()` fraction-input guard not directly tested
+~~### OI-1: `_parse_percent()` fraction-input guard not directly tested~~
 
-**Risk if unaddressed:** Operator enters `0.85` meaning 85%; guard (which exists and works) blocks it and shows an error. If guard ever regresses, `0.85` would be silently stored as `0.0085`, corrupting the merchant margin. Config editor could corrupt live pricing.
+**Resolved 2026-05-10** — `tests/test_web_routes.py::test_merchant_config_percent_field_accepts_human_format_and_rejects_fractions`
+pins acceptance ("85", "85.0", "85%" → 303 + stored as 0.85) and rejection ("0.85" → 400 + error text).
+Note: the rejection path was already covered by the pre-existing `test_merchant_config_invalid_percentage_is_rejected`.
 
-**File:line:** `src/zeal/web/routes/merchant.py:427-429`
-
-```python
-if 0 < percent <= 1:
-    errors[field] = "Enter human percentages like 85 or 85%, not fractions like 0.85."
-    return None
-```
-
-**Fix:** Add a test in `test_web_routes.py` (or `test_merchant_config_invalid_percentage_is_rejected`) that POSTs `"in_store_margin": "0.85"` and asserts 400 with an error message containing "fractions".
-
-**Effort:** ~30 min, test-only, no production code change.
+*No open items in 🔴 High.*
 
 ---
 
 ## 🟡 Medium — address before full live eBay refresh
 
-### OI-2: `POST /refresh` synthetic-mode 409 guard not tested
+~~### OI-2: `POST /refresh` synthetic-mode 409 guard not tested~~
 
-**Risk if unaddressed:** If the guard at `refresh.py:95-99` is accidentally removed, a live refresh could be triggered from a synthetic-mode dashboard, producing garbage recommendations or hitting live eBay with synthetic merchant data.
-
-**File:line:** `src/zeal/web/routes/refresh.py:95-99`
-
-**Fix:** Add a test in `test_refresh_routes.py` that creates an app with `ebay_mode="synthetic"` and POSTs to `/refresh`, asserting status 409 and the body "Refresh is disabled in synthetic mode".
-
-**Effort:** ~20 min, test-only.
+**Already covered** — `tests/test_refresh_routes.py::test_post_refresh_in_synthetic_mode_is_blocked` (line 265)
+pins status 409, body text, and no new `refresh_runs` row. The audit finding was incorrect; the test predated the audit.
 
 ---
 
@@ -149,6 +136,10 @@ if 0 < percent <= 1:
 
 | ID | Item | Resolved in |
 |---|---|---|
+| OI-1 | `_parse_percent()` fraction-input guard acceptance path tested | Phase 6 (2026-05-10) |
+| OI-2 | `POST /refresh` synthetic-mode 409 — confirmed already covered by existing test | Phase 6 (2026-05-10) |
+| OI-6 | `src/zeal/jobs/__init__.py` empty file deleted | Phase 5 (deletion commit) |
+| OI-7 | Garbled `c:devzeal-pricing-toolscripts/` artifact deleted | Phase 5 (deletion commit) |
 | — | `EbaySummary` unused class removed | Phase 3 |
 | — | `_invalid_scope_message()` scope literal de-duplicated | Phase 3 |
 | — | `_mode_context()` triplication consolidated into `web/templating.py` | Phase 3 |
