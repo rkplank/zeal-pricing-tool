@@ -92,11 +92,10 @@ class EbayTokenManager:
 
 
 def _invalid_scope_message(environment: str, description: str) -> str:
-    scope = "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
     env_label = "production" if environment == "production" else environment
     return (
         f"{description}. The {env_label} keyset cannot mint the Marketplace "
-        f"Insights scope {scope}. Check the eBay Developer Portal under "
+        f"Insights scope {_SCOPE}. Check the eBay Developer Portal under "
         f"{env_label.title()} -> Client Credential Grant Type scopes and confirm "
         "buy.marketplace.insights is assigned to this keyset. Do not run the "
         "first-five pilot or fall back to Browse API; sold-listing validation "

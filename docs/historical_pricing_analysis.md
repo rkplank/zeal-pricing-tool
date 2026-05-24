@@ -1,5 +1,7 @@
 # Historical Pricing Workbook Analysis
 
+> **Historical analysis.** Reflects spreadsheet state at time of writing; not a live spec.
+
 Generated: 2026-05-06T23:49:46Z
 
 This is read-only reconnaissance. The extracted JSON artifacts live under `docs/generated/` and are not production database tables.

@@ -21,18 +21,19 @@ production Marketplace Insights access.
 
 ## What To Say Up Front
 
-The dashboard does not publish prices, track accept/override decisions, export
-CSVs, blend CardCash into recommendations, or expose an `ebay_weight` control.
-The merchant config editor changes formula inputs only; it is not price
-publishing or operator action tracking.
+The dashboard shows saved tool recommendations only. It does not publish prices,
+track which prices the operator applied outside the tool, track accept/override
+decisions, export CSVs, blend CardCash into recommendations, or expose an
+`ebay_weight` control. The merchant config editor changes formula inputs only;
+it is not price publishing or operator action tracking.
 
 Synthetic baseline mode uses seeded spreadsheet-baseline recommendations. These
-rows are useful for reviewing layout, labels, formula explanations, and drill-down
-flow. They are not current live market prices.
+rows are useful for reviewing layout, labels, formula explanations, and
+drill-down flow. They are not current live market prices.
 
 Live validation should wait until eBay enables `buy.marketplace.insights` for
-the production keyset. Browse API fallback is not allowed because Browse does not
-provide sold listings.
+the production keyset. Browse API provides active listings only; it is not a
+valid source for sold listings.
 
 ## Pricing List Walkthrough
 
@@ -60,35 +61,57 @@ Click a normal high-volume merchant such as Home Depot.
 
 ## Merchant Detail Walkthrough
 
-On the detail page, start with the recommendation cards and ask:
+The merchant detail page is structured top to bottom in this order:
+
+1. **Header** — merchant name, tier badge, source badge (Synthetic baseline /
+   Live eBay / Config override / No Data), "Edit config" button
+2. **Latest recommendation cards** — Online sell, In-mail buy, In-store buy,
+   Electronic buy, eBay sell, Confidence
+3. **"Why this recommendation?"** — one-line source summary, confidence, computed
+   timestamp
+4. **Price History chart** — server-rendered SVG of saved tool recommendation
+   history; explicitly labeled as recommendation history, not prices published or
+   applied outside the tool
+5. **Formula Breakdown** — per-channel step-by-step formula audit
+6. **Recent eBay Observations** — valid listings used in the average (empty in
+   synthetic mode with explanation)
+7. **Excluded eBay Observations** — filtered listings with exclusion reasons
+   (empty in synthetic mode)
+8. **Competitor Reference** — reference-only; not used in recommendations
+9. **Recommendation History** — audit table of all saved recommendation rows
+10. **Recent Refresh Status** — last 10 refresh runs for this merchant
+
+### Header and recommendation cards
+
+Ask:
 
 - Are Online sell and In-mail buy prominent enough?
 - Are In-store buy, Electronic buy, eBay sell, and Confidence in the right place?
 - Can you quickly tell whether the row is synthetic, live eBay, No Data, or
   config-override-based?
 
-Move to "Why this recommendation?" and ask:
+### "Why this recommendation?"
+
+Ask:
 
 - Is this easy to find?
 - Does it explain the recommendation source before you inspect formulas?
-- Does the synthetic-mode warning prevent accidental trust in old market data?
+- Does the synthetic-mode note prevent accidental trust in old market data?
 
-Review Price History and ask:
+### Price History chart
+
+Ask:
 
 - Is it clear the chart uses saved tool recommendations only?
-- Is it clear the chart does not show prices Zeal actually used or published?
+- Is it clear the chart does not show prices Zeal actually used, published, or
+  applied outside the tool?
 - Are Online sell, In-mail buy, and eBay sell the right default lines?
 - Should In-store buy or Electronic buy be emphasized differently?
 - Should competitor/reference lines remain separate for now?
 
-Open Edit config and ask:
+### Formula Breakdown
 
-- Do the field groups match how the spreadsheet acted as a control surface?
-- Is the percentage helper text clear?
-- Is it clear blank override fields use the formula?
-- Is it clear edits affect future recommendations/config, not published prices?
-
-Review the formula breakdown and ask:
+Ask:
 
 - Are the labels understandable without developer context?
 - Do "eBay differential", "In-mail margin", "PayPal cost", "bad debt", and
@@ -96,20 +119,36 @@ Review the formula breakdown and ask:
 - Is the step-by-step breakdown useful, or would a shorter summary be better?
 - For ineligible channels, is "Not offered" the right wording?
 
-Review eBay observation sections and ask:
+### Edit config
+
+Ask:
+
+- Do the field groups match how the spreadsheet acted as a control surface?
+- Is the percentage helper text clear?
+- Is it clear blank override fields use the formula?
+- Is it clear edits affect future recommendations/config only, not published
+  prices or any record of past pricing decisions?
+
+### eBay observations
+
+Ask:
 
 - Is the pending/synthetic empty state honest enough while live access is blocked?
 - Once live data exists, which listing fields matter most for trust: title, sold
   date, face value, sale price, sell percentage, exclusion reason?
 - Would excluded listings help you diagnose bad eBay matches?
 
-Review Competitor Reference and ask:
+### Competitor Reference panel
+
+Ask:
 
 - Is it clear this panel is reference-only in v1?
 - Is it clear CardCash/competitor data does not feed the recommendation?
 - Which competitor fields are useful before any future blending work?
 
-Review Recommendation History table and ask:
+### Recommendation History table
+
+Ask:
 
 - Does the history table help you understand movement?
 - Does keeping the audit table below the chart feel useful?
@@ -134,8 +173,8 @@ The synthetic-mode review is successful when:
 - The operator can scan the list and identify rows worth drilling into.
 - Source, confidence, No Data, Not offered, and Config override labels are clear.
 - Merchant detail pages explain the recommendation source and formula clearly.
-- Price history is understood as recommendation history only, not published or
-  accepted prices.
+- Price history is understood as saved tool recommendation history only, not
+  published or accepted prices.
 - eBay observation empty states do not imply live data exists.
 - Competitor Reference is understood as reference-only and not part of v1
   recommendations.

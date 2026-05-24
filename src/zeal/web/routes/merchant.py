@@ -18,7 +18,7 @@ from zeal.db.repositories import (
     fetch_merchant_detail,
     update_merchant_config,
 )
-from zeal.web.templating import templates
+from zeal.web.templating import mode_context, templates
 
 router = APIRouter()
 TIERS = ("T24", "C", "Z", "NC")
@@ -98,7 +98,7 @@ def merchant_detail(request: Request, merchant_id: str) -> object:
             "price_history_chart": build_price_history_chart(bundle.history),
             "title": bundle.display_name,
             "saved": request.query_params.get("saved") == "1",
-            **_mode_context(request),
+            **mode_context(request),
         },
     )
 
@@ -142,15 +142,6 @@ async def save_merchant_config(request: Request, merchant_id: str) -> object:
     finally:
         conn.close()
     return RedirectResponse(f"/merchant/{merchant_id}?saved=1", status_code=303)
-
-
-def _mode_context(request: Request) -> dict[str, object]:
-    config = request.app.state.zeal_config
-    is_synthetic = config.ebay_mode == "synthetic"
-    return {
-        "ebay_mode_label": "Synthetic" if is_synthetic else "Live eBay",
-        "is_synthetic_mode": is_synthetic,
-    }
 
 
 def build_price_history_chart(history_desc: list[RecommendationSnapshot]) -> PriceHistoryChart:
@@ -304,7 +295,7 @@ def _render_config_form(
             "errors": errors,
             "tiers": TIERS,
             "title": f"Edit {config.display_name}",
-            **_mode_context(request),
+            **mode_context(request),
         },
         status_code=status_code,
     )

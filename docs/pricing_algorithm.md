@@ -15,7 +15,7 @@ v1 has two design properties:
 
 **Spreadsheet-faithful algorithm.** Given the same eBay sell input and the same per-merchant configuration, the v1 system produces the same Buy and Sell prices the spreadsheet produces. Phase 1 golden tests verify this property over 281 baseline merchant records.
 
-**Competitor data collected and displayed, not blended.** The tool ingests competitor data from at least one external source (CardCash in v1) on each refresh and displays it on the merchant detail page as reference material. Competitor data does not feed the recommendation in v1; the operator sees competitor rates alongside the eBay-derived recommendation and uses both as inputs to his own pricing decision.
+**Competitor data displayed as reference material, not blended.** The competitor data schema and aggregation logic are in place; an automated scraper is not yet implemented. When competitor observations are present in the database, they are displayed on the merchant detail page as reference-only material. Competitor data does not feed the recommendation in v1; the operator sees competitor rates alongside the eBay-derived recommendation and uses both as inputs to his own pricing decision.
 
 The engine's internal structure is forward-compatible with competitor blending: `ebay_weight` is a per-merchant column that defaults to 1.0 (eBay-only) and the engine code paths for competitor-only and blended computation exist and are unit-tested. v1 does not surface a UI to change `ebay_weight`; v2 will. This preserves the validation property while keeping the v2 expansion to a minimal change.
 
@@ -317,7 +317,7 @@ v1 implements this rule faithfully, with extended validity filters and several h
 
 eBay **Marketplace Insights API**, sold listings, US location only, sorted by end date descending. This is the correct API surface for sold-listing data. The Browse API — which is sometimes confused for this purpose — returns active (live) listings only and does not expose completed or sold listing data; it is not suitable for computing the eBay sell %.
 
-Access to the Marketplace Insights API is a Phase 3 prerequisite. It is a separately gated program beyond the general eBay developer program and requires a distinct business-case application. As of 2026-05-08, eBay has not yet responded; production Marketplace Insights entitlement remains blocked because the production keyset cannot mint `buy.marketplace.insights`. Production validation must wait until that scope is enabled. Browse API fallback is not allowed because Browse does not provide sold-listing data. See `architecture.md` §12 Q1 for current access status and decisions_log.md 2026-05-05 / 2026-05-08 for fallback and waiting-state decisions.
+Access to the Marketplace Insights API is a Phase 3 prerequisite. It is a separately gated program beyond the general eBay developer program and requires a distinct business-case application. As of 2026-05-10: production Marketplace Insights API access is NOT yet granted; the sandbox keyset has the `buy.marketplace.insights` scope; the production keyset does not; awaiting eBay support; v1 currently operates in synthetic mode. Browse API provides active listings only and is not a valid source for sold-listing data. See `architecture.md` §12 Q1 for current access status and decisions_log.md 2026-05-05 / 2026-05-10 for waiting-state decisions.
 
 ### 6.2 Validity filters
 
@@ -363,7 +363,7 @@ eBay listing titles are unstructured. Resolving "did this listing sell a Michael
 - Both stored on the merchant config row
 - Fallback to manual review when match confidence is low
 
-Default regexes are seeded from the merchant display name. Refining them through a UI is v2 work.
+Default regexes are seeded from the merchant display name. They can be refined through the narrow merchant config editor (v1 scope; one merchant at a time).
 
 ---
 
@@ -373,13 +373,13 @@ Competitor signal is computed independently per source, then aggregated across s
 
 ### 7.1 Data sources
 
-v1 ships with one active competitor source: CardCash. Additional sources are tracked in §11.
+v1 schema supports CardCash as the first competitor source. Additional sources are tracked in §11.
 
-Each source has its own ingestion path. In v1, that means the CardCash scraper. The algorithm consumes competitor observations from `competitor_observations` rows regardless of how they got there.
+An automated CardCash scraper is not yet implemented. Competitor observations can be inserted manually into `competitor_observations`; the schema and aggregation logic treat the source of insert as opaque. The automated scraper is a planned v2 addition.
 
 ### 7.2 Refresh cadence
 
-Competitor data is collected during the on-demand refresh, after the eBay refresh completes. CardCash requests sleep roughly 500-1000ms between requests to keep the scraper visibly polite.
+When implemented, competitor data will be collected during the on-demand refresh, after the eBay refresh completes. The first scraper target (CardCash) will sleep 500-1000ms between requests.
 
 ### 7.3 Per-source aggregation
 

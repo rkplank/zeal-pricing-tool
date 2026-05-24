@@ -30,10 +30,3 @@ class EbayObservation(BaseModel):
     fetched_at: str = ""
 
 
-class EbaySummary(BaseModel):
-    merchant_id: str
-    summary_date: str
-    sample_size: int
-    confidence: Confidence
-    ebay_sell_pct: float | None = None
-    most_recent_observation: str | None = None

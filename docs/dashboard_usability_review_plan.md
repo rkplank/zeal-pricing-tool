@@ -44,8 +44,8 @@ do not represent current live eBay sold-listing prices.
   track prices used or published outside the dashboard.
 
 Production validation must wait until `buy.marketplace.insights` is enabled for
-the production keyset. Browse API fallback is not allowed because Browse does not
-provide sold-listing data.
+the production keyset. Browse API provides active listings only; it is not a
+valid source for sold-listing data.
 
 ## Operator Walkthrough Checklist
 
@@ -62,16 +62,22 @@ provide sold-listing data.
   error.
 - Click a normal merchant, a config-override merchant, and any No Data merchant
   present in the seeded data.
-- On each detail page, ask whether the latest recommendation cards answer the
-  first question quickly.
-- Review "Why this recommendation?", the price history chart, and formula
-  breakdown labels.
+- On each detail page (top to bottom: header → recommendation cards → "Why this
+  recommendation?" → price history chart → formula breakdown → recent eBay
+  observations → excluded eBay observations → competitor reference →
+  recommendation history → recent refresh status):
+  - Ask whether the latest recommendation cards answer the first question quickly.
+  - Ask whether "Why this recommendation?" is easy to find and makes the source
+    clear before formulas are inspected.
+  - Ask whether the price history chart is understood as saved tool recommendation
+    history only, not prices Zeal published or applied outside the tool.
+  - Review formula breakdown labels for operator-facing language.
+  - Ask whether eBay observation empty states are honest about the pre-access state.
+  - Confirm Competitor Reference is understood as reference-only.
+  - Ask whether the recommendation history table helps understand movement.
 - Open Edit config and ask whether the field groups feel like the spreadsheet's
   control surface without implying pricing decisions are tracked here.
 - Confirm percentage helper text and blank override behavior are clear.
-- Review eBay observation empty states and ask what fields the operator will want
-  once live observations exist.
-- Review Competitor Reference and confirm it is understood as reference-only.
 - Ask the operator to describe the next action he would take outside the tool.
 
 ## UI Issues To Watch For

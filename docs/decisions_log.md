@@ -306,3 +306,37 @@ Competitor data is reference-only in v1 — displayed on the merchant detail pag
 **Alternatives:** (a) keep all config editing out of v1; (b) add broad admin/config editing; (c) allow only narrow one-merchant-at-a-time formula/config editing with history logging.
 
 **Rationale:** This is an explicit v1 scope change while awaiting eBay access. The spreadsheet was both a display surface and a control surface; a narrow merchant config editor preserves operator authority and helps tune regexes/config after live eBay access. Allowed scope is one-merchant-at-a-time config editing with history logging. Still out of scope: global constants editor, bulk editing, accept/override/skip workflow, `published_prices`, `operator_actions`, `ebay_weight` UI, competitor blending, auto-publishing, scheduled refresh, and internal sale history.
+
+---
+
+## 2026-05-10 — Price history chart implemented as server-rendered SVG, recommendation history only
+
+**Alternatives:** (a) client-side JS chart library (e.g. Chart.js); (b) no chart, history table only; (c) server-rendered SVG polylines.
+
+**Rationale:** A server-rendered SVG chart requires no JavaScript dependencies, no CDN assets beyond HTMX, and produces a fully accessible, easily styled chart with no flash-of-unloaded-content. The chart plots Online sell, In-mail buy, In-store buy, Electronic buy, and eBay sell from saved `price_recommendations` rows only. It does not represent prices Zeal actually published or applied outside the tool — the template explicitly notes this. The chart requires at least two comparable recommendation rows before it renders; a single row shows an empty-state message instead of a misleading single-point line.
+
+---
+
+## 2026-05-10 — Dashboard shows saved tool recommendations, not Zeal published prices
+
+**Alternatives:** (a) make the chart or detail pages represent published prices; (b) label chart/history rows as "recommendation" to distinguish from published; (c) add a "published price" column.
+
+**Rationale:** v1 does not track which recommendations the operator chose to apply, and the tool has no connection to where Zeal's prices are published. Every recommendation displayed in the dashboard — pricing list rows, merchant detail cards, price history chart, recommendation history table — reflects `price_recommendations` rows written by `run_refresh()`. These are the algorithm's saved outputs. The operator applies prices outside the tool. The phrase "Zeal actual/published prices" must not appear in the dashboard or docs as something the tool shows or tracks; templates and docs use "saved tool recommendations" or "recommendation history."
+
+---
+
+## 2026-05-10 — CardCash competitor data schema and aggregation logic present; automated scraper not yet built
+
+**Alternatives:** (a) ship CardCash scraper in v1 as originally planned; (b) defer schema/aggregation until scraper exists; (c) current path: schema + aggregation logic in v1, manual import only, automated scraper deferred.
+
+**Rationale:** The competitor data schema (`competitor_sources`, `competitor_observations`) and the `aggregate_competitor_observations()` pure function are implemented and tested. The competitor reference panel on the merchant detail page reads from these tables. However, the automated CardCash scraper (`ingestion/competitor/`) was not built in v1. Competitor data is available in the DB only if inserted manually or through a future scraper. The architecture and algorithm docs previously described the scraper as if it were current code; this entry documents the actual v1 status. The scraper remains a planned v2 addition.
+
+---
+
+## 2026-05-10 — eBay access status: production keyset cannot mint buy.marketplace.insights; awaiting eBay support
+
+**Status note added to decisions log for searchability.**
+
+Production Marketplace Insights API access is NOT yet granted. The sandbox keyset has the `buy.marketplace.insights` scope; the production keyset does not. Awaiting eBay support. v1 currently operates in synthetic mode using seeded spreadsheet-baseline recommendations. Do not run live eBay validation and do not use Browse API (Browse provides active listings only, not sold listings) until production Marketplace Insights entitlement is confirmed.
+
+See also: 2026-05-05 and 2026-05-08 entries above.

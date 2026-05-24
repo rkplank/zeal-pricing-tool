@@ -544,3 +544,41 @@ def test_lifespan_preserves_existing_ebay_client_factory_override(
 
     with TestClient(app):
         assert app.state.ebay_client_factory() is sentinel
+
+
+def test_merchant_config_percent_field_accepts_human_format_and_rejects_fractions(
+    tmp_path: Path,
+) -> None:
+    """Pin both sides of the _parse_percent fraction-input guard (BUG-05).
+
+    Acceptance: "85", "85.0", and "85%" must all be accepted and stored as 0.85.
+    Rejection: "0.85" must be rejected with the documented error, not silently
+    stored as 0.0085, which would corrupt the merchant's margin.
+    """
+    db_path = _seeded_db(tmp_path)
+    app = create_app(db_path)
+    client = TestClient(app)
+    base_payload = _config_payload(db_path, "home_depot")
+
+    # All three human-percentage representations of 85% must redirect on save.
+    for human_pct in ("85", "85.0", "85%"):
+        payload = {**base_payload, "in_store_margin": human_pct}
+        resp = client.post("/merchant/home_depot/config", data=payload, follow_redirects=False)
+        assert resp.status_code == 303, f"Expected redirect for in_store_margin={human_pct!r}"
+
+    # The last successful POST should have stored 0.85, not 85.0 or 0.0085.
+    conn = get_connection(db_path)
+    try:
+        stored = conn.execute(
+            "SELECT in_store_margin FROM merchants WHERE merchant_id = 'home_depot'"
+        ).fetchone()
+    finally:
+        conn.close()
+    assert stored is not None
+    assert abs(float(stored["in_store_margin"]) - 0.85) < 0.0001
+
+    # Fraction-style input must be rejected with the explanatory error message.
+    payload = {**base_payload, "in_store_margin": "0.85"}
+    resp = client.post("/merchant/home_depot/config", data=payload)
+    assert resp.status_code == 400
+    assert "not fractions like 0.85" in resp.text
