@@ -89,9 +89,12 @@ Cross-layer imports flow inward: `web` and `ingestion` may import from `pricing`
 ### Database
 
 - SQLite at `data/zeal.db` (gitignored).
-- Canonical schema is `src/zeal/db/schema.sql` plus numbered migrations in `src/zeal/db/migrations/`.
+- Canonical schema is `src/zeal/db/schema.sql` only. `apply_schema()` in `src/zeal/db/connection.py` runs it via `conn.executescript()` with `CREATE TABLE IF NOT EXISTS` — idempotent on new databases, but does not `ALTER TABLE` existing ones. There is no `src/zeal/db/migrations/` directory.
+- When the schema changes, apply new columns manually via `ALTER TABLE` on the existing DB, or delete `data/zeal.db` and re-seed. Document which path was used. **Before re-seeding, confirm that no production data (merchant config edits, eBay observations, competitor observations) exists in the current DB that is not reproducible from the seed fixture.**
 - All percentages stored as `REAL` in `[0, 1]`. All timestamps as ISO 8601 UTC text.
 - Merchants are deactivated (`is_active = 0`), never deleted. Same for global constants — history matters.
+- `price_recommendations` is append-only and is the system of record for all algorithm recommendations.
+- `competitor_observations` is append-only and is the system of record for competitor pricing history. Do not delete or update rows; re-runs append new observations.
 
 ## What not to do in v1 without explicit scope change
 

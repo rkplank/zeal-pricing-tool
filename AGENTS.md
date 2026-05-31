@@ -65,10 +65,12 @@ Cross-layer imports flow inward: `web` and `ingestion` may import from `pricing`
 ## Database rules
 
 - SQLite file path defaults to `data/zeal.db`.
-- Canonical schema lives in `src/zeal/db/schema.sql` plus numbered migrations in `src/zeal/db/migrations/`.
+- Canonical schema lives in `src/zeal/db/schema.sql` only. `apply_schema()` in `src/zeal/db/connection.py` runs it via `conn.executescript()` — idempotent on new databases (`CREATE TABLE IF NOT EXISTS`), but does **not** `ALTER TABLE` existing ones. There is no `src/zeal/db/migrations/` directory.
+- When schema changes land, apply new columns via `ALTER TABLE` on the existing DB, or delete and re-seed. Confirm no unreproducible production data exists before re-seeding.
 - Timestamps are ISO 8601 UTC text.
 - Merchants are deactivated with `is_active = 0`; do not delete merchants.
 - `price_recommendations` is append-only and is the system of record for recommendations.
+- `competitor_observations` is append-only and is the system of record for competitor pricing history. Never delete or update rows; re-runs append new observations.
 - Do not reintroduce `published_prices`, `operator_actions`, risk/watchlist columns, or user/auth tables in v1.
 
 ## v1 scope guardrails

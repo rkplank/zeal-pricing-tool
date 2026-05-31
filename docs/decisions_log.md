@@ -340,3 +340,67 @@ Competitor data is reference-only in v1 — displayed on the merchant detail pag
 Production Marketplace Insights API access is NOT yet granted. The sandbox keyset has the `buy.marketplace.insights` scope; the production keyset does not. Awaiting eBay support. v1 currently operates in synthetic mode using seeded spreadsheet-baseline recommendations. Do not run live eBay validation and do not use Browse API (Browse provides active listings only, not sold listings) until production Marketplace Insights entitlement is confirmed.
 
 See also: 2026-05-05 and 2026-05-08 entries above.
+
+---
+
+## 2026-05-30 — Two-concept competitor confidence model: stored source-quality vs effective confidence
+
+**Alternatives:** (a) a single confidence value set at parse time that encodes both data-surface precision and recency in one step; (b) separate stored and computed values, with aggregation consuming the computed form.
+
+**Rationale:** Conflating precision and recency in a single stored value makes it impossible to re-evaluate freshness as observations age without updating existing rows — which is undesirable in an append-only table. Separating the concepts allows: (1) the scraper to record what it knows at parse time (the surface's inherent precision), immutably; (2) the aggregation layer to apply a recency decay at query time without touching stored data. This design keeps `competitor_observations` append-only while still allowing effective confidence to degrade as observations age. See `competitor_scraper_design.md §6` and `pricing_algorithm.md §7.5`.
+
+---
+
+## 2026-05-30 — CompetitorClient Protocol parameter renamed source_key (from cardcash_id)
+
+**Alternatives:** (a) keep `cardcash_id: int` as the parameter name, accept that it is source-specific; (b) use `source_key: int` as a more generic name that accommodates future non-CardCash sources; (c) use `source_key: str | int` immediately to handle both numeric and string identifiers.
+
+**Rationale:** `cardcash_id` in the Protocol signature is a leaking abstraction: the Protocol is meant to be source-agnostic, but a CardCash-named field makes every future implementer feel out-of-place. `source_key: int` is generic enough for v1 (all identifiers in v1 are integers from the CardCash blob `id` field) while being specific enough to type correctly. Widening to `str | int` is a one-line change when a source with string identifiers is added. The DB column `merchants.cardcash_id` retains its name — this is the Protocol parameter only. See `competitor_scraper_design.md §3.1`.
+
+---
+
+## 2026-05-30 — Cart POST response parsed by field match, not positional index
+
+**Alternatives:** (a) use `response["cards"][-1]["percentage"]` (the last entry, assuming it is the one just added); (b) locate the entry by matching `card["merchant"] == source_key` (the merchantId just POSTed).
+
+**Rationale:** the CartCash cart API accumulates entries across merchants in a single session — adding a second merchant produces a two-entry `cards` array under the same `cartId`. Positional access `cards[-1]` assumes the API always returns the most-recently-added card last, and that no reordering ever occurs. This assumption is fragile and unverifiable without exhaustive testing across every merchant and API version. Field-based matching on the `merchant` integer is unambiguous regardless of array order. The scraper already knows `source_key` (it just POSTed it); the match is trivial and eliminates a category of cross-merchant contamination bug. See `competitor_scraper_design.md §4.5` step 3 and `§4.8` step 3.
+
+---
+
+## 2026-05-30 — enterValue standardized to 100, clamped to [minFaceValue, maxFaceValue] from blob
+
+**Alternatives:** (a) use a fixed value of 100 with no guard; (b) use the merchant's `maxFaceValue` from the blob; (c) clamp 100 to the merchant's face-value range, skip if bounds are malformed.
+
+**Rationale:** standardizing on $100 ensures comparability across merchants and across runs — a consistent basis for the `percentage` rate returned by the API. However, some merchants may not support a $100 denomination (e.g. a merchant whose cards only come in $25 increments). Posting an unsupported `enterValue` could produce a non-201 response or an error payload rather than a rate. Reading `minFaceValue` and `maxFaceValue` from the blob (already fetched) and clamping 100 to that range handles the common edge case without a live probe. Malformed bounds (`minFaceValue > maxFaceValue`) indicate a corrupt blob entry and warrant a `no_data` observation rather than a heuristic guess. The clamp is a Phase 1 safety assumption; Phase 2 verification with real API behavior is explicitly required. See `competitor_scraper_design.md §4.5` step 3 and `§4.8` step 3.
+
+---
+
+## 2026-05-30 — Session resilience: re-bootstrap on 401/403 or ≥18-min elapsed; 40-min total budget cap
+
+**Alternatives:** (a) no session resilience — rely on the 20-minute JWT covering a ~3-4 minute normal run; (b) re-bootstrap on any non-2xx response; (c) re-bootstrap specifically on 401/403 or at 18 minutes elapsed, with a 40-minute total cap.
+
+**Rationale:** a normal run of ~300 merchants at 750ms per-POST takes ~3-4 minutes, comfortably within the 20-minute JWT lifetime. However, the session can become invalid mid-run due to stale tokens (401/403) or if the run is paused or slowed by retries. Checking elapsed time at 18 minutes (2-minute safety margin) provides a proactive escape hatch without polling or inspecting the JWT's `exp` field. Re-bootstrapping on 401/403 handles the reactive case. The 40-minute total budget cap prevents a stalled merchant or repeated re-bootstraps from extending a run indefinitely, ensuring the `refresh_runs` row reaches a terminal state (`partial`) in all scenarios. See `competitor_scraper_design.md §4.6`.
+
+---
+
+## 2026-05-30 — Canary invariants checked before processing catalog; failure raises CompetitorClientError
+
+**Alternatives:** (a) no canary check — proceed with catalog regardless of size or anchor presence; (b) per-merchant validation only, skipping merchants that fail field-type checks; (c) catalog-wide canary before any per-merchant processing.
+
+**Rationale:** structural failures (schema renames, response format changes, truncated catalog) affect all merchants simultaneously and produce systematically wrong data, not isolated per-merchant errors. Emitting ~300 `no_data` observations when the catalog is empty or missing key fields provides the operator with no useful information and obscures the real failure mode. Raising `CompetitorClientError` on catalog-level canary failure aborts the run cleanly, sets `status='failed'`, and surfaces a single error message. The three invariants chosen (catalog size >100, anchor merchant presence, field type checks) are observable from the blob without network calls and detect the most common structural breakage. Anchor IDs may need updating if CardCash renumbers merchants (rare). See `competitor_scraper_design.md §9`.
+
+---
+
+## 2026-05-30 — Phase 4 migration hard gate before first live scraper run
+
+**Alternatives:** (a) run the scraper immediately after schema.sql edits with delete-and-reseed assuming no production data exists; (b) require explicit confirmation of an ALTER TABLE path or a DB backup before the first live run.
+
+**Rationale:** the Phase 1 schema additions (`cardcash_id` on `merchants`, `kind` on `refresh_runs`) are applied via `schema.sql` + delete-and-reseed. By the time Phase 4 ships, the production `data/zeal.db` may contain operator-entered merchant config edits, live eBay observations, and recommendation history not reproducible from the seed fixture. A silent delete-and-reseed would silently destroy this data. Requiring an explicit gate (ALTER TABLE path documented, or backup confirmed) prevents accidental data loss. This is a one-time gate for the Phase 4 feature, not an ongoing operational requirement. See `competitor_scraper_design.md §10 Phase 4` and `architecture.md §11 Phase 4`.
+
+---
+
+## 2026-05-30 — Second competitor source triggers evaluation of competitor_merchant_mapping table
+
+**Alternatives:** (a) add a source-specific column to `merchants` for each new source (e.g. `raise_id`, `cardpool_id`); (b) normalize source-specific identifiers into a `competitor_merchant_mapping(merchant_id, source_name, source_key)` table from the start; (c) defer the mapping table decision until a second source is actively being added.
+
+**Rationale:** one column per source (`cardcash_id`, `raise_id`, …) is straightforward for 2-3 sources but becomes unwieldy at 4+. A `competitor_merchant_mapping` table normalizes the pattern and avoids schema churn for each source addition. v1 uses the per-column approach (only `cardcash_id`) because it is simpler and the single-source requirement is well-defined. The decision to migrate to the normalized table should be made when a second source is actively scoped — at that point the operator will know whether both sources' identifiers are numeric integers (in which case the column approach extends easily) or whether source-specific shapes require a more flexible schema. See `pricing_algorithm.md §11` item 17 and `competitor_scraper_design.md §5`.

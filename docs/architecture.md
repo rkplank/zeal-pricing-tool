@@ -426,6 +426,7 @@ CREATE TABLE refresh_runs (
 - **No FK cascades on delete.** Merchants are never deleted, only deactivated (`is_active = 0`). This preserves history.
 - **Snapshot config in `price_recommendations`.** When an old recommendation is reviewed months later, we want to know what the config was at the time, not what it is now. The JSON snapshot is the cheapest way to get this.
 - **`price_recommendations` is append-only.** Every refresh writes new rows. The merchant detail page reads the historical trail. There is no `current_recommendation` table; "current" means "most recent row by `computed_at` for this merchant."
+- **`competitor_observations` is append-only.** Every scraper run appends rows; existing observations are never modified or deleted. The table is the system of record for competitor pricing history. Queries for the current rate use `ORDER BY observed_at DESC LIMIT 1` scoped to merchant/channel.
 - **No `published_prices` or `operator_actions` tables.** v1 does not track which recommendations the operator chose to apply. The merchant config editor changes formula inputs and writes config history; it is not operator action tracking. v2 may reintroduce published-price workflow once the operator's workflow is stable enough to define what "published" means in this tool's context.
 - **No dedicated `users` table.** Single user, no auth needed.
 - **Competitor data is reference-only in v1.** Competitor observations exist for operator context and future blending. They are not used by v1 recommendations.
@@ -639,6 +640,8 @@ Goal: automated competitor data collection.
 
 The competitor data schema and aggregation logic are already in place; this phase adds the collection mechanism only.
 
+**Pre-condition before first live run.** The Phase 4 scraper requires two schema additions applied via `schema.sql` + delete-and-reseed: `cardcash_id INTEGER` on `merchants`, and `kind TEXT` discriminator on `refresh_runs`. Before running the scraper against a production `data/zeal.db` that holds operator-entered merchant config edits or live eBay observations, confirm one of: (a) a manual `ALTER TABLE` path exists to add the columns without data loss, or (b) a backup/export of the DB (or at minimum `merchant_config_history` and `ebay_observations`) has been taken before re-seeding. See `competitor_scraper_design.md §10 Phase 4`.
+
 **Acceptance:** after a refresh, CardCash rates appear on the merchant detail page for active merchants. The recommendation is unchanged — competitor data is reference-only in v1.
 
 ### Phase 5 — Polish and stabilize
@@ -685,7 +688,7 @@ To keep v1 scoped:
 - No email/SMS alerts on failures (logs only).
 - No internationalization.
 - No automated competitor source discovery.
-- Only one competitor source in v1 (CardCash). Additional sources are v2.
+- Only one competitor source in v1 (CardCash). Additional sources are v2. When a second source is added, evaluate whether to normalize source-specific merchant identifiers into a `competitor_merchant_mapping(merchant_id, source_name, source_key)` table (replacing the per-column approach of `merchants.cardcash_id`) — see `pricing_algorithm.md §11` item 17 and `competitor_scraper_design.md §5`.
 - No automated database backup — manual copy as documented in §10.
 
 All of these are tracked in the algorithm spec's v2 roadmap or are de novo improvements for later versions.

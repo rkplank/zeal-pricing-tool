@@ -405,14 +405,17 @@ In v1, CardCash is the only source, so the aggregate usually equals the latest v
 
 ### 7.5 Confidence
 
-Per-observation confidence is set by the ingestion path:
+Competitor confidence is a two-concept model. Both concepts use the same four-level enum (`high`, `medium`, `low`, `none`), but they are set and consumed at different points.
 
-- **High:** scraped successfully within the last 7 days from a source that returned a current `available` status.
-- **Medium:** scraped 7-30 days ago, or scraped within 7 days but the source returned partial or stale-flagged data.
-- **Low:** scraped 30+ days ago, or scraped but the source returned conflicting/ambiguous data.
-- **None:** the observation cannot be used (parse failure, source unreachable, source explicitly returns no-data status).
+**Stored source-quality confidence** is set immutably at parse time by the ingestion path (the scraper). It reflects the *data-surface precision* of the raw signal, not how fresh the observation is. Rules are per-source — see `competitor_scraper_design.md §6` for CardCash-specific assignments. General principle:
+- `"high"` — a real transactable quote at a known face value from a first-class data surface (e.g. CardCash sell-flow cart POST).
+- `"medium"` — a coarse catalog aggregate (e.g. CardCash `upToPercentage` max-discount blob, which understates the typical consumer price).
+- `"low"` — a derived or out-of-range value that passed validation but is flagged for operator awareness.
+- `"none"` — parse failure, network error, explicit no-data response, or missing required fields. These observations are stored for display but excluded from aggregation.
 
-Per-source confidence in the dashboard summarizes the highest-confidence currently-valid observation for that merchant from that source.
+**Effective confidence** is the v2 design intent: source-quality degrades with observation age at read/aggregation time, not at storage time — a sell-flow `"high"` observation scraped 25 days ago is less reliable than one scraped yesterday. In v1, `aggregate_competitor_observations()` uses stored confidence directly; the only recency control is a binary 30-day age cutoff that drops observations entirely. No decay schedule is implemented. The model is structured so that when a second source or longer refresh cadences make recency degradation meaningful, the aggregation function is the right place to add it without touching stored data.
+
+Per-source confidence shown in the dashboard summarizes the highest stored source-quality confidence among currently-valid observations for that merchant from that source. It is a display convenience, not the value driving aggregation.
 
 ### 7.6 Cold-start and missing data
 
@@ -515,6 +518,9 @@ Tracked here so they're not lost. Priority is approximate — each is a separate
 13. **Automated risk / bankruptcy monitoring** — alert when a merchant's eBay price drops abnormally fast (early warning of retailer trouble).
 14. **Tier intent vs. drift audit** — one-time review of every merchant's per-merchant config against tier defaults; corrections logged. See `spreadsheet_recon.md` §11.
 15. **Drift-audit dashboard** — surface the tier-vs-margin-row drift in the UI for interactive review.
+16. **Competitor pricing-history view** — trend chart of `competitor_observations` over time for a merchant (analogous to the eBay price-history chart on the detail page). The `competitor_observations` table is append-only and already stores the full history; this is a query and display addition only.
+17. **`competitor_merchant_mapping` table + per-source config** — normalize source-specific merchant identifiers out of `merchants` into a separate `competitor_merchant_mapping(merchant_id, source_name, source_key)` table. Appropriate when 4+ sources are active and a single `cardcash_id` column on `merchants` becomes unwieldy. See `competitor_scraper_design.md §5` Option A discussion.
+18. **Optional CI test gate** — add a GitHub Actions workflow (or equivalent) that runs `uv run pytest` and `uv run ruff check` on PRs. In v1 testing is operator-run locally; a CI gate becomes worthwhile once the codebase sees contributions beyond a single author.
 
 **Architectural North Star (out of scope, but the design protects feasibility):**
 

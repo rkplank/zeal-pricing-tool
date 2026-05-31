@@ -255,6 +255,7 @@ def test_refresh_runs_progress_columns_match_v1_docs() -> None:
     columns = {row[1] for row in conn.execute("PRAGMA table_info(refresh_runs)")}
     assert columns == {
         "id",
+        "kind",
         "status",
         "started_at",
         "completed_at",
