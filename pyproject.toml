@@ -42,6 +42,9 @@ select = ["E", "F", "I", "UP"]
 testpaths = ["tests"]
 addopts = "--continue-on-collection-errors --timeout=30 --timeout-method=thread"
 
+[tool.uv]
+python-preference = "only-system"
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
