@@ -47,7 +47,7 @@ Current status as of 2026-06-14, latest verified commit `13187d0`:
 - `truststore` added as a runtime dependency and injected at CLI startup
   (`main()`) and app lifespan (`_lifespan()`). Resolves
   `CERTIFICATE_VERIFY_FAILED` on both cardcash.com and api.ebay.com.
-  **REVIEW GATE** — see decisions_log.md 2026-06-14.
+  Approved by operator 2026-06-14.
 
 Do not run live eBay validation while production Marketplace Insights
 entitlement is blocked. Browse API provides active listings only; it is not a

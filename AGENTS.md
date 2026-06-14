@@ -39,8 +39,7 @@ Current status as of 2026-06-14, latest verified commit `13187d0`:
   "only-system"` in `[tool.uv]`. Suite: **507 passing** on Python 3.12.
 - `[project.scripts] zeal = "zeal.cli:main"` wired; `zeal seed/serve/smoke-ebay` resolve.
 - `truststore` runtime dependency added; injected at CLI startup and app lifespan.
-  Resolves `CERTIFICATE_VERIFY_FAILED` on Windows. **REVIEW GATE** — see
-  decisions_log.md 2026-06-14 before treating as merged.
+  Resolves `CERTIFICATE_VERIFY_FAILED` on Windows. Approved by operator 2026-06-14.
 
 Update this section when the project state changes materially.
 
