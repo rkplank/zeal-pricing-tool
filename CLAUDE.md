@@ -17,7 +17,7 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-05-10, latest verified commit `1d31eb0`:
+Current status as of 2026-06-14, latest verified commit `afac89b`:
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
@@ -34,6 +34,20 @@ Current status as of 2026-05-10, latest verified commit `1d31eb0`:
   not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
+- Competitor scraper Phase 1 foundation committed: `src/zeal/ingestion/competitor/`
+  contains the base protocol (`base.py`), error types (`errors.py`), and
+  `__init__.py`. Actual CardCash scraper logic is not yet built; this is the
+  structural foundation for Phase 4.
+- Python standardized to 3.12.10 (python.org CPython) via `winget install
+  Python.Python.3.12`. `.python-version` set to `3.12`; `[tool.uv]
+  python-preference = "only-system"` pins uv to the system install. Suite: **507
+  passing** on Python 3.12.
+- `[project.scripts] zeal = "zeal.cli:main"` added; `src/zeal/__main__.py`
+  added. `uv run zeal seed/serve/smoke-ebay` all resolve.
+- `truststore` added as a runtime dependency and injected at CLI startup
+  (`main()`) and app lifespan (`_lifespan()`). Resolves
+  `CERTIFICATE_VERIFY_FAILED` on both cardcash.com and api.ebay.com.
+  **REVIEW GATE** — see decisions_log.md 2026-06-14.
 
 Do not run live eBay validation while production Marketplace Insights
 entitlement is blocked. Browse API provides active listings only; it is not a

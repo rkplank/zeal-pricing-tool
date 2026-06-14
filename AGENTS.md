@@ -19,7 +19,7 @@ Read the relevant docs before any non-trivial change. If code and docs disagree,
 
 ## Current v1 status
 
-Current status as of 2026-05-10, latest verified commit `1d31eb0`:
+Current status as of 2026-06-14, latest verified commit `afac89b`:
 
 - Phase 1 complete: spreadsheet parser, pricing engine, SQLite schema, golden baseline tests.
 - FastAPI dashboard implemented with seeded/synthetic recommendations, merchant
@@ -33,6 +33,14 @@ Current status as of 2026-05-10, latest verified commit `1d31eb0`:
   not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
+- Competitor scraper Phase 1 foundation committed: `src/zeal/ingestion/competitor/`
+  (`base.py`, `errors.py`, `__init__.py`). No CardCash scraper logic yet.
+- Python standardized to 3.12.10 (python.org CPython); `python-preference =
+  "only-system"` in `[tool.uv]`. Suite: **507 passing** on Python 3.12.
+- `[project.scripts] zeal = "zeal.cli:main"` wired; `zeal seed/serve/smoke-ebay` resolve.
+- `truststore` runtime dependency added; injected at CLI startup and app lifespan.
+  Resolves `CERTIFICATE_VERIFY_FAILED` on Windows. **REVIEW GATE** — see
+  decisions_log.md 2026-06-14 before treating as merged.
 
 Update this section when the project state changes materially.
 

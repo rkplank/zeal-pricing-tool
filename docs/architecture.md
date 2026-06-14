@@ -37,7 +37,7 @@ This document specifies how the v1 pricing tool is built and deployed. It assume
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | Python 3.12+ | Best ecosystem for HTTP scraping, data handling, eBay API |
+| Language | Python 3.12 (python.org CPython) | Best ecosystem for HTTP scraping, data handling, eBay API. Must use the python.org installer (not uv-managed python-build-standalone): the python.org Windows build includes the OpenSSL applink shim required for correct TLS on Windows. |
 | Web framework | FastAPI | Modern, async-capable, well-documented, plays nicely with HTMX |
 | Templating | Jinja2 | Standard for FastAPI server-rendered pages |
 | Frontend | HTMX + Tailwind | Server-rendered HTML with minimal JS; right complexity for a one-user dashboard |
@@ -569,15 +569,22 @@ In v1 the dashboard always passes `config.ebay_weight = 1.0`, so the recommendat
 
 One-time, ~20 minutes:
 
-1. Install Python 3.12 from python.org (check "Add to PATH").
+1. Install **Python 3.12 from python.org** (`winget install Python.Python.3.12` or
+   download from python.org/downloads). Check "Add to PATH" if using the GUI installer.
+   Do NOT use a uv-managed python-build-standalone interpreter — it omits the OpenSSL
+   applink shim required for correct TLS on Windows, causing `CERTIFICATE_VERIFY_FAILED`
+   on sites like cardcash.com and api.ebay.com.
 2. Install `uv`: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
 3. Install Git for Windows.
 4. Clone the repo to `C:\zeal-pricing-tool`.
-5. `uv sync` — installs dependencies.
+5. `uv sync` — installs dependencies (including `truststore` for Windows TLS).
+   Run in **PowerShell**, not Git Bash: Git Bash resolves `python.exe` from
+   `mingw64\bin` before the system PATH, which can silently pick the wrong interpreter
+   and break SSL DLL resolution.
 6. Create `.env` from `.env.example`. Leave `ZEAL_EBAY_MODE=synthetic` until production Marketplace Insights access is confirmed.
-7. `uv run python -m zeal.cli init-db` — creates the SQLite file at `data/zeal.db`.
-8. `uv run python -m zeal.cli seed` — loads merchant data from the baseline fixture.
-9. `uv run python -m zeal.cli serve` — starts the dashboard at `http://127.0.0.1:8000`.
+7. `uv run zeal init-db` — creates the SQLite file at `data/zeal.db`.
+8. `uv run zeal seed` — loads merchant data from the baseline fixture.
+9. `uv run zeal serve` — starts the dashboard at `http://127.0.0.1:8000`.
 
 ### 9.2 Daily use
 

@@ -24,6 +24,53 @@ Confirm each item is true **before eBay notifies you that access is granted:**
   and confirm it is **not** staged.
 - [ ] The dashboard is **stopped** before starting this runbook.
 
+### §0.1 Python version and TLS prerequisites
+
+**Python version.** The repo requires Python 3.12 from the python.org installer
+(`winget install Python.Python.3.12`). Verify with `py -3.12 --version`. Do NOT
+use a uv-managed python-build-standalone interpreter: it omits the OpenSSL applink
+shim needed for correct TLS on Windows, causing `CERTIFICATE_VERIFY_FAILED` on
+eBay and CardCash endpoints even when the system CA store is intact.
+
+**Run all commands in PowerShell, not Git Bash.** Git Bash prepends
+`C:\Program Files\Git\mingw64\bin` to `PATH`, which contains its own `python.exe`
+and `openssl.dll`. This can silently select the wrong interpreter and break SSL
+DLL resolution, causing test failures or TLS errors that do not reproduce in
+PowerShell. All commands in this runbook must be run in Windows PowerShell or
+PowerShell 7.
+
+**TLS trust (truststore).** The `truststore` package is a runtime dependency that
+injects the Windows system certificate store into Python's `ssl` module at startup.
+It is called once in `zeal.cli.main()` and once in `zeal.web.app._lifespan()`.
+This resolves `CERTIFICATE_VERIFY_FAILED` for both `api.ebay.com` and
+`www.cardcash.com` on networks with corporate or system-managed CA chains.
+
+**uv dependency management also needs native TLS.** `truststore` fixes Python's runtime `ssl` module, but uv uses its own Rust TLS stack and is unaffected by truststore. On this machine, plain `uv sync` fails with the same `CERTIFICATE_VERIFY_FAILED` error because uv cannot reach PyPI. Any future `uv add` or `uv sync` that needs to fetch new packages must be run with `--native-tls` (or `UV_NATIVE_TLS=1` set in the environment):
+
+```powershell
+uv sync --native-tls
+uv add some-package --native-tls
+```
+
+Packages already in the local cache install without a network call and do not need the flag. Add `UV_NATIVE_TLS=1` to your PowerShell profile or `.env` if running `uv sync` bare needs to work transparently.
+
+**Before-first-live-run TLS gate.** Before running any live eBay or CardCash
+requests, verify truststore injection is working on this machine:
+
+```powershell
+uv run python -c "
+import truststore; truststore.inject_into_ssl()
+import httpx
+print('ebay:', httpx.get('https://api.ebay.com').status_code)
+print('cardcash:', httpx.get('https://www.cardcash.com/', headers={'User-Agent':'Mozilla/5.0'}, follow_redirects=True).status_code)
+"
+```
+
+Expected output: `ebay: 404` (TLS succeeds, 404 is normal for the base URL) and
+`cardcash: 200`. If either raises `CERTIFICATE_VERIFY_FAILED`, the system CA store
+is not trusted on this machine — stop and investigate the CA configuration before
+proceeding with live eBay validation.
+
 ---
 
 ## §1. Pre-flight: confirm the scope is live on the production keyset

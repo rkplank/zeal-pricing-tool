@@ -404,3 +404,17 @@ See also: 2026-05-05 and 2026-05-08 entries above.
 **Alternatives:** (a) add a source-specific column to `merchants` for each new source (e.g. `raise_id`, `cardpool_id`); (b) normalize source-specific identifiers into a `competitor_merchant_mapping(merchant_id, source_name, source_key)` table from the start; (c) defer the mapping table decision until a second source is actively being added.
 
 **Rationale:** one column per source (`cardcash_id`, `raise_id`, …) is straightforward for 2-3 sources but becomes unwieldy at 4+. A `competitor_merchant_mapping` table normalizes the pattern and avoids schema churn for each source addition. v1 uses the per-column approach (only `cardcash_id`) because it is simpler and the single-source requirement is well-defined. The decision to migrate to the normalized table should be made when a second source is actively scoped — at that point the operator will know whether both sources' identifiers are numeric integers (in which case the column approach extends easily) or whether source-specific shapes require a more flexible schema. See `pricing_algorithm.md §11` item 17 and `competitor_scraper_design.md §5`.
+
+---
+
+## 2026-06-14 — Python 3.12 (python.org CPython) standardization and truststore TLS fix
+
+**Alternatives:** (a) continue on python-build-standalone 3.14 (the uv default); (b) standardize on 3.12 python.org CPython; (c) set `python-preference = "only-managed"` to pin uv-managed 3.12.
+
+**Rationale:** The venv was being created on python-build-standalone 3.14 (the uv default when no system 3.12 exists). Two problems with that: (1) `pyproject.toml` targets Python 3.12 — running on 3.14 means CI and local are testing different minor versions; (2) python-build-standalone on Windows omits the OpenSSL `applink.c` shim, which routes `malloc`/`free` calls between DLLs at SSL startup. Without it, Python's `ssl` module can raise `CERTIFICATE_VERIFY_FAILED` even on sites with well-known CA chains. The python.org installer bundles the correct OpenSSL build with the applink wiring intact.
+
+`python-preference = "only-system"` in `[tool.uv]` ensures uv will not silently fall back to a managed interpreter if the system one is missing — the error is explicit and correctable, rather than a silent version drift.
+
+Python 3.12.10 installed via `winget install Python.Python.3.12 --source winget`. All 507 tests pass on 3.12.
+
+**Truststore (REVIEW GATE):** `truststore==0.10.4` added as a runtime dependency (requires explicit operator approval per CLAUDE.md). `truststore.inject_into_ssl()` called once in `zeal.cli.main()` and once in `zeal.web.app._lifespan()` — startup only, not inside library or ingestion modules, and not in tests (respx mocks are unaffected). Before/after probe: both `api.ebay.com` and `www.cardcash.com` raised `CERTIFICATE_VERIFY_FAILED` without injection; after injection both return successful TLS handshakes (HTTP 404 and 200 respectively). This resolves a blocker that would have prevented any live eBay or CardCash network calls on this machine. The commit carrying truststore is marked REVIEW GATE and must not be treated as merged until the operator approves the runtime dependency addition.

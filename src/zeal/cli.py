@@ -158,6 +158,10 @@ def _load_merchant(db_path: Path, merchant_id: str) -> MerchantRecord | None:
 
 
 def main() -> None:
+    import truststore
+
+    truststore.inject_into_ssl()
+
     parser = argparse.ArgumentParser(description="Zeal pricing tool CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
