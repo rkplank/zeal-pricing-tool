@@ -34,14 +34,24 @@ Current status as of 2026-06-14, foundation work complete (Python 3.12, entry po
   not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
-- Competitor scraper Phase 1 foundation committed: `src/zeal/ingestion/competitor/`
-  contains the base protocol (`base.py`), error types (`errors.py`), and
-  `__init__.py`. Actual CardCash scraper logic is not yet built; this is the
-  structural foundation for Phase 4.
+- Competitor scraper foundation and Prompt 2a complete:
+  - `src/zeal/ingestion/competitor/` — `CompetitorClient` Protocol, error
+    hierarchy, and `__init__.py` (Phase 1 foundation).
+  - `src/zeal/ingestion/competitor/cardcash.py` — `CardCashClient` with
+    `parse_catalog()`, `sell_observation()`, `no_data_sell_observation()`,
+    and `fetch_buy_catalog()`. Buy-blob (`sell`-channel) surface fully tested.
+  - `tests/fixtures/cardcash/buy_catalog.html` — 773-merchant live capture.
+  - `tests/test_cardcash_scraper.py` — 18 tests, all passing.
+  - upToPercentage semantic gate confirmed (see decisions_log 2026-06-14):
+    values are percentage-points; `price_pct = 1 − upToPercentage/100` correct.
+  - **Sell-side cart flow (§4.5/§4.6/§4.8) NOT yet implemented.** Session
+    bootstrap does not work headlessly — homepage GET sets no cookies; the
+    `/v3/carts` POST 400s. Deferred to Prompt 2b after re-derivation of the
+    bootstrap flow. `fetch_observations()` raises `NotImplementedError`.
 - Python standardized to 3.12.10 (python.org CPython) via `winget install
   Python.Python.3.12`. `.python-version` set to `3.12`; `[tool.uv]
-  python-preference = "only-system"` pins uv to the system install. Suite: **507
-  passing** on Python 3.12.
+  python-preference = "only-system"` pins uv to the system install. Suite:
+  **525 passing** on Python 3.12.
 - `[project.scripts] zeal = "zeal.cli:main"` added; `src/zeal/__main__.py`
   added. `uv run zeal seed/serve/smoke-ebay` all resolve.
 - `truststore` added as a runtime dependency and injected at CLI startup
