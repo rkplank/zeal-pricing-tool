@@ -19,7 +19,7 @@ Read the relevant docs before any non-trivial change. If code and docs disagree,
 
 ## Current v1 status
 
-Current status as of 2026-06-14, latest verified commit `13187d0`:
+Current status as of 2026-06-14, foundation work complete (Python 3.12, entry point, truststore) — 2026-06-14:
 
 - Phase 1 complete: spreadsheet parser, pricing engine, SQLite schema, golden baseline tests.
 - FastAPI dashboard implemented with seeded/synthetic recommendations, merchant

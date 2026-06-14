@@ -17,7 +17,7 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-06-14, latest verified commit `13187d0`:
+Current status as of 2026-06-14, foundation work complete (Python 3.12, entry point, truststore) — 2026-06-14:
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
