@@ -418,3 +418,31 @@ See also: 2026-05-05 and 2026-05-08 entries above.
 Python 3.12.10 installed via `winget install Python.Python.3.12 --source winget`. All 507 tests pass on 3.12.
 
 **Truststore:** `truststore==0.10.4` added as a runtime dependency; approved by operator 2026-06-14. `truststore.inject_into_ssl()` called once in `zeal.cli.main()` and once in `zeal.web.app._lifespan()` — startup only, not inside library or ingestion modules, and not in tests (respx mocks are unaffected). Before/after probe: both `api.ebay.com` and `www.cardcash.com` raised `CERTIFICATE_VERIFY_FAILED` without injection; after injection both return successful TLS handshakes (HTTP 404 and 200 respectively). This resolves a blocker that would have prevented any live eBay or CardCash network calls on this machine.
+
+---
+
+## 2026-06-14 — upToPercentage semantic gate confirmed: percentage-points, formula price_pct = 1 − up/100 correct
+
+**Gate required by:** `competitor_scraper_design.md §4.4` and `§10 Phase 2`. Phase 4 must not ship until this is confirmed and documented here.
+
+**Verification method:** parsed the real `tests/fixtures/cardcash/buy_catalog.html` fixture (773 merchants) using `json.JSONDecoder().raw_decode()` and inspected field values directly. No scraper code consumed; literals checked by hand.
+
+**Findings:**
+
+| Merchant | id | `upToPercentage` (type) | `price_pct = 1 − up/100` |
+|---|---|---|---|
+| Home Depot | 27 | `2` (int) | `0.9800` — consumer pays 98.0% of face value |
+| Starbucks | 54 | `5.6` (float) | `0.9440` — consumer pays 94.4% of face value |
+| Macaroni Grill | 352 | `45.5` (float) | `0.5450` — consumer pays 54.5% of face value |
+
+Full catalog stats: `upToPercentage` ranges [0.0, 45.5] across all 773 entries; all values in [0, 100]; median ≈ 5.5. These are clearly percentage-points (a discount in percentage-point units), not normalized fractions (which would all be <1.0).
+
+**Gate result — CONFIRMED:**
+- (a) `upToPercentage` is a discount in percentage-points. A value of 2 means "2% off face value," so the consumer pays 98.0%, not 2.0% of face value.
+- (b) The formula `price_pct = 1 − upToPercentage / 100` yields plausible consumer prices. Derived values cluster in [0.54, 1.0], consistent with real gift-card market rates.
+
+**Non-obvious finding — field types:** `sellIsOff` and `cardsAvailable` are `int` in the live API response, not `bool`. `sellIsOff ∈ {0, 1}`; `cardsAvailable` is a card-inventory count (0 = none in stock, N = N cards available). 79 of 773 merchants have `sellIsOff=1`; 182 have `cardsAvailable=0`. The parser uses Python truthiness checks (`if entry["sellIsOff"]`, `if not entry["cardsAvailable"]`), which handle both int and bool correctly and match the spec's intent.
+
+**Alternatives considered:** no alternatives — this was an empirical verification step, not a design choice. The only decision was the formula direction (consumer-pays vs discount), and the data confirms the consumer-pays reading: `upToPercentage=2` on Home Depot means the buyer pays 98% of face value.
+
+**Consequence:** Phase 4 (`zeal refresh-competitors`) may proceed once the sell-side cart flow (Prompt 2b) is implemented and validated. The buy-blob `sell`-channel formula is locked as `price_pct = 1 − upToPercentage / 100`.
