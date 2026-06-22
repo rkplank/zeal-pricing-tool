@@ -132,7 +132,7 @@ The buy page family and the sell-side API have both been captured and confirmed:
 | Data needed | URL pattern |
 |---|---|
 | Buy catalog (consumer purchase, includes `upToPercentage` for all merchants) | `https://www.cardcash.com/buy-gift-cards/{slug}` |
-| Session bootstrap (sets anonymous session cookie) | `https://www.cardcash.com/` |
+| Session bootstrap (sets anonymous session cookie) | `https://production-api.cardcash.com/v3/session` |
 | Create sell cart | `https://production-api.cardcash.com/v3/carts` |
 | Add card to sell cart | `https://production-api.cardcash.com/v3/carts/{cartId}/cards` |
 
@@ -151,8 +151,8 @@ id                int    — CardCash numeric merchant id (stored as merchants.c
 slug              str    — URL/DB slug, e.g. "discount-home-depot-cards"
 upToPercentage    float  — coarse MAX discount offered (not an average or typical rate)
 cardType          str    — e.g. "physical", "ecode", "BOTH"
-sellIsOff         bool   — whether the merchant is currently not accepting cards
-cardsAvailable    bool   — whether cards are in stock for purchase
+sellIsOff         int    — 1 if merchant is not accepting card sales, 0 otherwise (truthy int, not bool)
+cardsAvailable    int    — inventory count (0 = none in stock, N = N cards available; falsy when 0)
 maxFaceValue      float
 minFaceValue      float
 aliases           list[str]
@@ -177,12 +177,12 @@ The flow has four steps:
 **Step 2 — Create cart.**
 
 - POST `https://production-api.cardcash.com/v3/carts`
-- Empty body (`Content-Length: 0`).
+- Body: `{"action": "sell"}` (CardCash action name for "CardCash buys from the user"; `"buy"` is incorrect — it accepts the request but then rejects card-adds with a JSON schema validation error).
 - Response 201; body:
   ```json
-  {"cart": {"customerId": "...", "sellCart": {"cartId": "...", "cards": []}, "buyCart": {}}}
+  {"cartId": "...", "cards": []}
   ```
-- Extract `cart.sellCart.cartId`.
+- Extract `response["cartId"]` (flat — **not** `cart.sellCart.cartId`).
 
 **Step 3 — Add card (per merchant).**
 
@@ -220,12 +220,10 @@ This is the second of two REQUIRED data paths for v1. Parsing details are in §4
 
 Before any `/v3/` API call, acquire a session cookie:
 
-1. GET `https://www.cardcash.com/` with a cookie-jar-enabled client.
-2. The server sets `q3vsT1zXO=<JWT>` in the response. The JWT has a 20-minute expiry (`exp − iat = 1200 s`). A normal run of ~300 merchants at 750ms per-POST takes ~3–4 minutes — well within the session lifetime. **Session resilience:** re-bootstrap (repeat step 1) if any `/v3/` call returns HTTP 401 or 403, or when 18 minutes have elapsed since bootstrap (2-minute safety margin before expiry). After re-bootstrap, recreate the cart — a new `cartId` is required because the old cartId is tied to the expired session — then resume the per-merchant loop at the next unprocessed merchant.
-3. Mirror the cookie name into the `x-cc-app` header on all subsequent `/v3/` calls: the header value is literally the string `q3vsT1zXO` (the cookie name, not the JWT value). This is the app identifier, not an authorization token.
+1. POST `https://production-api.cardcash.com/v3/session` with an empty JSON body (`{}`) and header `x-cc-app: q3vsT1zXO`. The server sets `q3vsT1zXO=<JWT>` via `Set-Cookie` in the response. A cookie-jar-enabled httpx client carries the cookie on all subsequent `/v3/` calls automatically — no manual cookie injection and no `Authorization` header. The `x-cc-app: q3vsT1zXO` header value is the literal string `q3vsT1zXO` (an app identifier, not the JWT value), and must be sent on every `/v3/` request.
+2. The JWT has a 20-minute expiry (`expiresInSeconds: ~1199`). A normal run of ~300 merchants at 750ms per-POST takes ~3–4 minutes — well within the session lifetime.
+3. **Session resilience:** re-POST `/v3/session` if any `/v3/` call returns HTTP 401 or 403, or when 18 minutes have elapsed since bootstrap (2-minute safety margin before expiry). After re-bootstrap, recreate the cart — a new `cartId` is required because the old cartId is tied to the expired session — then resume the per-merchant loop at the next unprocessed merchant.
 4. The session is anonymous — no login, no credentials.
-
-The same session and cookie cover both data surfaces. The buy-side blob fetch (§4.4) does not strictly require a session cookie, but bootstrapping first keeps the client state simple and the client ready for the cart flow. One GET, one anonymous session per run.
 
 If `zeal refresh-competitors` is invoked more than once within 20 minutes, each invocation bootstraps a new session independently — session state is not shared across CLI invocations.
 
@@ -242,8 +240,8 @@ For the buy-side surface (§4.4), parse the catalog from the GET response:
 5. For each entry: extract `id`, `slug`, `upToPercentage`, `sellIsOff`, `cardsAvailable`, `cardType`.
 6. Match to Zeal merchants via `merchants.cardcash_id = entry["id"]` (exact integer match; no fuzzy logic needed).
 7. Determine `availability`:
-   - `sellIsOff == True` → `"unavailable"`
-   - `cardsAvailable == False` → `"unavailable"`
+   - `sellIsOff` truthy (i.e. `sellIsOff != 0`) → `"unavailable"`
+   - `cardsAvailable` falsy (i.e. `cardsAvailable == 0`) → `"unavailable"`
    - Otherwise → `"available"`
 8. Compute `price_pct` from `upToPercentage`. `upToPercentage` is a **discount percentage** — it represents how many percentage points off face value CardCash is offering (e.g. Home Depot = 1.6 means "1.6% off", so the consumer pays 98.4%). Conversion: `price_pct = 1 - (upToPercentage / 100)`. Example: `upToPercentage=1.6` → `price_pct=0.984`. `upToPercentage=0` means 0% off (consumer pays full face value) → `price_pct=1.0`; this is valid and must not be treated as unavailable — availability in the buy-side surface is determined by `sellIsOff`/`cardsAvailable` (step 7), not by the discount value. Validity guard: first sanity-check that `upToPercentage` is in `[0, 100]` (it is a percentage so negative or >100 is a data error); if outside that range, log a warning and set `confidence="low"`. Then validate the derived `price_pct` against the `[0.20, 1.20]` band from §2.3; if outside, log a warning and set `confidence="low"` (the observation is still stored for the display panel).
 9. Store the matching entry dict (JSON-serialised) in `raw_payload` for operator debugging.
@@ -256,9 +254,9 @@ If the `<script id="injected-variables">` block is absent or the JSON fails to p
 
 Companion to §4.7 for the sell-side cart flow (§4.5). Per-run processing:
 
-1. **Bootstrap session.** One GET to `https://www.cardcash.com/` via a cookie-jar-enabled client (see §4.6). The same client instance used for the buy-side blob fetch may be reused.
+1. **Bootstrap session.** POST to `https://production-api.cardcash.com/v3/session` with `{}` body and `x-cc-app: q3vsT1zXO` header (see §4.6 corrected). The same client instance carries the cookie on all subsequent calls.
 
-2. **Create cart.** POST `/v3/carts` with empty body; extract `cartId` from `response["cart"]["sellCart"]["cartId"]`.
+2. **Create cart.** POST `/v3/carts` with body `{"action": "sell"}`; extract `cartId` from `response["cartId"]` (flat — not `response["cart"]["sellCart"]["cartId"]`).
 
 3. **For each Zeal merchant** with `cardcash_id IS NOT NULL` where the blob entry (from §4.7) has `sellIsOff=false`:
    - Apply the `enterValue` clamp from §4.5 step 3 (clamp 100 to `[minFaceValue, maxFaceValue]` from the blob entry; emit `no_data` and skip this POST if bounds are malformed). POST `/v3/carts/{cartId}/cards` with body `{"card": {"merchantId": <source_key>, "enterValue": <clamped_value>}}`.
@@ -447,11 +445,11 @@ Sell-side cart flow:
 
 ## 9. Politeness and robustness
 
-**v1 cost model:** ~1 session bootstrap (GET `https://www.cardcash.com/`) + ~1 buy-side blob GET + ~1 cart create + N add-card POSTs (N = Zeal merchants with `cardcash_id IS NOT NULL` and `sellIsOff=false`). For ~300 merchants: ~303 requests, ~3–4 minutes per run at 750ms per-POST sleep. The per-request sleep now applies to a real per-merchant loop, not a single GET. The session JWT's 20-minute expiry comfortably covers this; no refresh logic is needed in v1. The scraper appears to CardCash as a fresh anonymous shopper each run (new anonymous session per invocation); rate-limit posture is worth monitoring in early runs (O3).
+**v1 cost model:** ~1 session bootstrap (POST `https://production-api.cardcash.com/v3/session`) + ~1 buy-side blob GET + ~1 cart create + N add-card POSTs (N = Zeal merchants with `cardcash_id IS NOT NULL` and `sellIsOff=0`). For ~300 merchants: ~303 requests, ~3–4 minutes per run at 750ms per-POST sleep. The per-request sleep now applies to a real per-merchant loop, not a single GET. The session JWT's 20-minute expiry comfortably covers this. The scraper appears to CardCash as a fresh anonymous shopper each run (new anonymous session per invocation); rate-limit posture is worth monitoring in early runs (O3).
 
 **User-Agent:** use a realistic browser UA string (e.g. `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36`). Do not use Python's default `python-httpx/...` UA — it is trivially blocked.
 
-**Canary invariants.** Before processing the catalog or emitting any observations, verify: (1) `merchantsBuy.sortedByName` contains more than 100 entries — a substantially smaller result indicates a truncated or structurally broken response; (2) at least one well-known anchor merchant is present and plausible — e.g. Home Depot (`id=27`) or Starbucks (`id=54`) appears in the array and its `upToPercentage` is in `[0, 100]`; (3) required field types are correct — `id` is `int`, `upToPercentage` is `float` or `int`, `sellIsOff` is `bool`. On any invariant failure, raise `CompetitorClientError` — no observations are written for any merchant. Canary failures signal a scraper-level structural change (schema rename, response format shift), not a per-merchant data issue.
+**Canary invariants.** Before processing the catalog or emitting any observations, verify: (1) `merchantsBuy.sortedByName` contains more than 100 entries — a substantially smaller result indicates a truncated or structurally broken response; (2) at least one well-known anchor merchant is present and plausible — e.g. Home Depot (`id=27`) or Starbucks (`id=54`) appears in the array and its `upToPercentage` is in `[0, 100]`; (3) required field types are correct — `id` is `int`, `upToPercentage` is `float` or `int`, `sellIsOff` is `int` (0 or 1). On any invariant failure, raise `CompetitorClientError` — no observations are written for any merchant. Canary failures signal a scraper-level structural change (schema rename, response format shift), not a per-merchant data issue.
 
 **Retry/backoff:** mirror the eBay client's `_get_with_retry` pattern:
 - HTTP 429 → respect `Retry-After` header if present; otherwise back off exponentially (2s, 4s, 8s) up to 3 attempts, then raise `CompetitorRateLimitError`.

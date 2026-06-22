@@ -446,3 +446,23 @@ Full catalog stats: `upToPercentage` ranges [0.0, 45.5] across all 773 entries; 
 **Alternatives considered:** no alternatives — this was an empirical verification step, not a design choice. The only decision was the formula direction (consumer-pays vs discount), and the data confirms the consumer-pays reading: `upToPercentage=2` on Home Depot means the buyer pays 98% of face value.
 
 **Consequence:** Phase 4 (`zeal refresh-competitors`) may proceed once the sell-side cart flow (Prompt 2b) is implemented and validated. The buy-blob `sell`-channel formula is locked as `price_pct = 1 − upToPercentage / 100`.
+
+---
+
+## 2026-06-22 — CardCash sell-flow auth + cart shape corrected from live capture
+
+**Decision:** Updated `competitor_scraper_design.md §4.5, §4.6, §4.8` to reflect confirmed live API behavior. Supersedes the auth-recon and cart-shape assumptions in the 2026-05-30 entries.
+
+**Corrections:**
+
+1. **Auth is cookie-not-header.** Bootstrap is `POST /v3/session` with `json {}` and header `x-cc-app: q3vsT1zXO`. The server responds with `Set-Cookie: q3vsT1zXO=<JWT>`. A cookie-jar httpx client carries the JWT automatically on all subsequent `/v3/` calls. There is no `Authorization` header. The `x-cc-app` header value is the literal string `q3vsT1zXO` (an app identifier), sent on every `/v3/` request — it is not the JWT value. The prior design described a homepage GET bootstrap (`GET https://www.cardcash.com/`) that does not work headlessly; the homepage GET sets no cookies.
+
+2. **Cart action must be `"sell"`, not empty.** `POST /v3/carts` with body `{"action":"sell"}` returns 201. The body `{"action":"buy"}` also returns 201 but then rejects card-adds with a JSON schema validation error (`instance is not exactly one from </AddGiftCard>,</AddNewGiftCard>,</AddNewCartCard>`). The prior design described an empty body.
+
+3. **cartId is flat.** The cart-create response body is `{"cartId": "...", "cards": []}`. The prior design described a nested shape (`cart.sellCart.cartId`) which does not match the live API.
+
+4. **`sellIsOff` and `cardsAvailable` are `int`, not `bool`.** `sellIsOff ∈ {0, 1}`; `cardsAvailable` is a card-inventory count. Python truthiness checks handle both int and bool correctly; the canary field-type check is updated to accept `int`.
+
+**Source:** confirmed by headless probe script (anonymous session, no transaction, two merchants) executed 2026-06-21. Probe committed as a fixture-capture run; probe script not committed.
+
+**Alternatives:** none — this was empirical correction, not a design choice.
