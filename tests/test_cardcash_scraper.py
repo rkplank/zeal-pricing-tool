@@ -17,6 +17,7 @@ import json
 import pathlib
 from datetime import UTC, datetime
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -684,3 +685,184 @@ async def test_fetch_observations_emits_both_channels() -> None:
     assert len(obs) == 2
     assert all(o.merchant_id == "home-depot" for o in obs)
     assert all(o.source_name == "cardcash" for o in obs)
+
+
+# ---------------------------------------------------------------------------
+# _post_card_with_retry — retry-path tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_retry_429_then_201() -> None:
+    """429 on first attempt → sleep(2.0) → 201 on second attempt → buy obs available."""
+    catalog = {27: _entry(27)}
+    responses = iter(
+        [
+            httpx.Response(429),
+            httpx.Response(201, text=_CARD_ADD_BODY),
+        ]
+    )
+    with patch(
+        "zeal.ingestion.competitor.cardcash.asyncio.sleep", new_callable=AsyncMock
+    ) as mock_sleep:
+        with respx.mock:
+            respx.post(_CARTS_URL).mock(return_value=httpx.Response(201, text=_CART_CREATE_BODY))
+            respx.post(_CARDS_URL).mock(side_effect=lambda req: next(responses))
+            async with httpx.AsyncClient() as http:
+                cc = _make_client(http, catalog=catalog)
+                obs = await cc.fetch_observations(
+                    merchant_id="merch-x", source_key=27, observed_at=_T0
+                )
+
+    mock_sleep.assert_any_await(2.0)
+    buy_obs = next(o for o in obs if o.channel != "sell")
+    assert buy_obs.availability == "available"
+    assert buy_obs.price_pct == pytest.approx(_HD_BUY_PRICE_PCT, abs=1e-9)
+
+
+@pytest.mark.asyncio
+async def test_retry_429_retry_after_header() -> None:
+    """429 with Retry-After: 5 header → sleep(5.0) not sleep(2.0)."""
+    catalog = {27: _entry(27)}
+    responses = iter(
+        [
+            httpx.Response(429, headers={"Retry-After": "5"}),
+            httpx.Response(201, text=_CARD_ADD_BODY),
+        ]
+    )
+    with patch(
+        "zeal.ingestion.competitor.cardcash.asyncio.sleep", new_callable=AsyncMock
+    ) as mock_sleep:
+        with respx.mock:
+            respx.post(_CARTS_URL).mock(return_value=httpx.Response(201, text=_CART_CREATE_BODY))
+            respx.post(_CARDS_URL).mock(side_effect=lambda req: next(responses))
+            async with httpx.AsyncClient() as http:
+                cc = _make_client(http, catalog=catalog)
+                await cc.fetch_observations(merchant_id="merch-x", source_key=27, observed_at=_T0)
+
+    mock_sleep.assert_any_await(5.0)
+    sleep_args = [call.args[0] for call in mock_sleep.await_args_list]
+    assert 2.0 not in sleep_args, "Retry-After header should override the default backoff delay"
+
+
+@pytest.mark.asyncio
+async def test_retry_429_exhausted() -> None:
+    """429 × 3 → no_data, exactly 3 card-add calls, no exception raised."""
+    catalog = {27: _entry(27)}
+    with patch("zeal.ingestion.competitor.cardcash.asyncio.sleep", new_callable=AsyncMock):
+        with respx.mock:
+            respx.post(_CARTS_URL).mock(return_value=httpx.Response(201, text=_CART_CREATE_BODY))
+            cards_route = respx.post(_CARDS_URL).mock(return_value=httpx.Response(429))
+            async with httpx.AsyncClient() as http:
+                cc = _make_client(http, catalog=catalog)
+                obs = await cc.fetch_observations(
+                    merchant_id="merch-x", source_key=27, observed_at=_T0
+                )
+
+    assert cards_route.call_count == 3, "Should attempt card-add exactly 3 times before giving up"
+    buy_obs = next(o for o in obs if o.channel != "sell")
+    assert buy_obs.availability == "no_data"
+
+
+@pytest.mark.asyncio
+async def test_retry_5xx_then_201() -> None:
+    """503 on first attempt → sleep(2.0) → 201 on second → buy obs available."""
+    catalog = {27: _entry(27)}
+    responses = iter(
+        [
+            httpx.Response(503),
+            httpx.Response(201, text=_CARD_ADD_BODY),
+        ]
+    )
+    with patch(
+        "zeal.ingestion.competitor.cardcash.asyncio.sleep", new_callable=AsyncMock
+    ) as mock_sleep:
+        with respx.mock:
+            respx.post(_CARTS_URL).mock(return_value=httpx.Response(201, text=_CART_CREATE_BODY))
+            respx.post(_CARDS_URL).mock(side_effect=lambda req: next(responses))
+            async with httpx.AsyncClient() as http:
+                cc = _make_client(http, catalog=catalog)
+                obs = await cc.fetch_observations(
+                    merchant_id="merch-x", source_key=27, observed_at=_T0
+                )
+
+    mock_sleep.assert_any_await(2.0)
+    buy_obs = next(o for o in obs if o.channel != "sell")
+    assert buy_obs.availability == "available"
+    assert buy_obs.price_pct == pytest.approx(_HD_BUY_PRICE_PCT, abs=1e-9)
+
+
+@pytest.mark.asyncio
+async def test_retry_5xx_exhausted() -> None:
+    """503 × 2 → no_data, exactly 2 card-add calls, no exception raised."""
+    catalog = {27: _entry(27)}
+    with patch("zeal.ingestion.competitor.cardcash.asyncio.sleep", new_callable=AsyncMock):
+        with respx.mock:
+            respx.post(_CARTS_URL).mock(return_value=httpx.Response(201, text=_CART_CREATE_BODY))
+            cards_route = respx.post(_CARDS_URL).mock(return_value=httpx.Response(503))
+            async with httpx.AsyncClient() as http:
+                cc = _make_client(http, catalog=catalog)
+                obs = await cc.fetch_observations(
+                    merchant_id="merch-x", source_key=27, observed_at=_T0
+                )
+
+    assert cards_route.call_count == 2, "Should attempt card-add exactly 2 times before giving up"
+    buy_obs = next(o for o in obs if o.channel != "sell")
+    assert buy_obs.availability == "no_data"
+
+
+@pytest.mark.asyncio
+async def test_retry_network_error_then_201() -> None:
+    """ConnectError on first attempt → sleep(1.0) → 201 on second → buy obs available."""
+    catalog = {27: _entry(27)}
+    call_count = 0
+
+    def _side_effect(req: httpx.Request) -> httpx.Response:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise httpx.ConnectError("connection refused")
+        return httpx.Response(201, text=_CARD_ADD_BODY)
+
+    with patch(
+        "zeal.ingestion.competitor.cardcash.asyncio.sleep", new_callable=AsyncMock
+    ) as mock_sleep:
+        with respx.mock:
+            respx.post(_CARTS_URL).mock(return_value=httpx.Response(201, text=_CART_CREATE_BODY))
+            respx.post(_CARDS_URL).mock(side_effect=_side_effect)
+            async with httpx.AsyncClient() as http:
+                cc = _make_client(http, catalog=catalog)
+                obs = await cc.fetch_observations(
+                    merchant_id="merch-x", source_key=27, observed_at=_T0
+                )
+
+    mock_sleep.assert_any_await(1.0)
+    buy_obs = next(o for o in obs if o.channel != "sell")
+    assert buy_obs.availability == "available"
+    assert buy_obs.price_pct == pytest.approx(_HD_BUY_PRICE_PCT, abs=1e-9)
+
+
+@pytest.mark.asyncio
+async def test_retry_network_error_exhausted() -> None:
+    """ConnectError × 2 → no_data, exactly 2 attempts, no exception raised."""
+    catalog = {27: _entry(27)}
+    call_count = 0
+
+    def _side_effect(req: httpx.Request) -> httpx.Response:
+        nonlocal call_count
+        call_count += 1
+        raise httpx.ConnectError("connection refused")
+
+    with patch("zeal.ingestion.competitor.cardcash.asyncio.sleep", new_callable=AsyncMock):
+        with respx.mock:
+            respx.post(_CARTS_URL).mock(return_value=httpx.Response(201, text=_CART_CREATE_BODY))
+            respx.post(_CARDS_URL).mock(side_effect=_side_effect)
+            async with httpx.AsyncClient() as http:
+                cc = _make_client(http, catalog=catalog)
+                obs = await cc.fetch_observations(
+                    merchant_id="merch-x", source_key=27, observed_at=_T0
+                )
+
+    assert call_count == 2, "Should attempt card-add exactly 2 times before giving up"
+    buy_obs = next(o for o in obs if o.channel != "sell")
+    assert buy_obs.availability == "no_data"
