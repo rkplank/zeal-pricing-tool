@@ -47,7 +47,8 @@ Current status as of 2026-06-22, Prompt 2b complete (CardCash sell-side cart flo
     (action:"sell" → {"cartId":"...","cards":[]}).
   - `tests/fixtures/cardcash/card_add_response.json` — live capture (2-card
     response: Home Depot id=27 percentage=83, Starbucks id=54 percentage=76).
-  - `tests/test_cardcash_scraper.py` — 33 tests, all passing.
+  - `tests/test_cardcash_scraper.py` — 40 tests, all passing (includes 7
+    retry-path tests for `_post_card_with_retry` with AsyncMock sleep patching).
   - upToPercentage semantic gate confirmed (see decisions_log 2026-06-14):
     values are percentage-points; `price_pct = 1 − upToPercentage/100` correct.
   - Sell-side bootstrap confirmed (see decisions_log 2026-06-22): auth is
@@ -60,7 +61,7 @@ Current status as of 2026-06-22, Prompt 2b complete (CardCash sell-side cart flo
 - Python standardized to 3.12.10 (python.org CPython) via `winget install
   Python.Python.3.12`. `.python-version` set to `3.12`; `[tool.uv]
   python-preference = "only-system"` pins uv to the system install. Suite:
-  **540 passing** on Python 3.12.
+  **547 passing** on Python 3.12.
 - `[project.scripts] zeal = "zeal.cli:main"` added; `src/zeal/__main__.py`
   added. `uv run zeal seed/serve/smoke-ebay` all resolve.
 - `truststore` added as a runtime dependency and injected at CLI startup
