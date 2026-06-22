@@ -17,7 +17,7 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-06-14, foundation work complete (Python 3.12, entry point, truststore) — 2026-06-14:
+Current status as of 2026-06-22, Prompt 2b complete (CardCash sell-side cart flow):
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
@@ -34,24 +34,33 @@ Current status as of 2026-06-14, foundation work complete (Python 3.12, entry po
   not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
-- Competitor scraper foundation and Prompt 2a complete:
+- CardCash scraper complete through Prompt 2b:
   - `src/zeal/ingestion/competitor/` — `CompetitorClient` Protocol, error
     hierarchy, and `__init__.py` (Phase 1 foundation).
-  - `src/zeal/ingestion/competitor/cardcash.py` — `CardCashClient` with
-    `parse_catalog()`, `sell_observation()`, `no_data_sell_observation()`,
-    and `fetch_buy_catalog()`. Buy-blob (`sell`-channel) surface fully tested.
+  - `src/zeal/ingestion/competitor/cardcash.py` — `CardCashClient` fully
+    implemented: `parse_catalog()`, `sell_observation()`,
+    `no_data_sell_observation()`, `fetch_buy_catalog()` (2a buy-blob surface),
+    plus `_ensure_session()`, `_ensure_cart()`, `_ensure_catalog()`,
+    `_post_card_with_retry()`, and `fetch_observations()` (2b sell-cart surface).
   - `tests/fixtures/cardcash/buy_catalog.html` — 773-merchant live capture.
-  - `tests/test_cardcash_scraper.py` — 18 tests, all passing.
+  - `tests/fixtures/cardcash/cart_create_response.json` — live capture
+    (action:"sell" → {"cartId":"...","cards":[]}).
+  - `tests/fixtures/cardcash/card_add_response.json` — live capture (2-card
+    response: Home Depot id=27 percentage=83, Starbucks id=54 percentage=76).
+  - `tests/test_cardcash_scraper.py` — 33 tests, all passing.
   - upToPercentage semantic gate confirmed (see decisions_log 2026-06-14):
     values are percentage-points; `price_pct = 1 − upToPercentage/100` correct.
-  - **Sell-side cart flow (§4.5/§4.6/§4.8) NOT yet implemented.** Session
-    bootstrap does not work headlessly — homepage GET sets no cookies; the
-    `/v3/carts` POST 400s. Deferred to Prompt 2b after re-derivation of the
-    bootstrap flow. `fetch_observations()` raises `NotImplementedError`.
+  - Sell-side bootstrap confirmed (see decisions_log 2026-06-22): auth is
+    cookie-not-header (POST /v3/session sets q3vsT1zXO cookie); cart action
+    must be "sell" (not "buy"); cartId is flat (response["cartId"]).
+  - `fetch_observations()` emits TWO observations per merchant: sell-channel
+    (buy-blob) + buy-channel (cart flow). Never raises on per-merchant failure.
+  - **Phase 4 (refresh orchestrator, CLI, display wiring) NOT yet implemented.**
+    `zeal refresh-competitors` does not yet exist. Awaiting operator review.
 - Python standardized to 3.12.10 (python.org CPython) via `winget install
   Python.Python.3.12`. `.python-version` set to `3.12`; `[tool.uv]
   python-preference = "only-system"` pins uv to the system install. Suite:
-  **525 passing** on Python 3.12.
+  **540 passing** on Python 3.12.
 - `[project.scripts] zeal = "zeal.cli:main"` added; `src/zeal/__main__.py`
   added. `uv run zeal seed/serve/smoke-ebay` all resolve.
 - `truststore` added as a runtime dependency and injected at CLI startup
