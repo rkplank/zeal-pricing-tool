@@ -113,6 +113,13 @@ class MerchantDetailBundle:
 
 
 @dataclass(frozen=True)
+class MerchantForRefresh:
+    merchant_id: str
+    display_name: str
+    cardcash_id: int
+
+
+@dataclass(frozen=True)
 class MerchantConfigRow:
     merchant_id: str
     display_name: str
@@ -131,6 +138,33 @@ class MerchantConfigRow:
     exclusion_regex: str | None
     notes: str | None
     is_active: bool
+
+
+def get_merchants_for_competitor_refresh(
+    conn: sqlite3.Connection,
+) -> list[MerchantForRefresh]:
+    """Active merchants with a non-NULL cardcash_id, ordered by display_name.
+
+    These are the merchants a competitor refresh will iterate over.  Any
+    merchant with cardcash_id IS NULL is skipped by the scraper.
+    """
+    rows = conn.execute(
+        """
+        SELECT merchant_id, display_name, cardcash_id
+        FROM merchants
+        WHERE is_active = 1
+          AND cardcash_id IS NOT NULL
+        ORDER BY display_name
+        """
+    ).fetchall()
+    return [
+        MerchantForRefresh(
+            merchant_id=str(row["merchant_id"]),
+            display_name=str(row["display_name"]),
+            cardcash_id=int(row["cardcash_id"]),
+        )
+        for row in rows
+    ]
 
 
 def fetch_pricing_list(conn: sqlite3.Connection, *, delta_window: int = 5) -> list[MerchantListRow]:
