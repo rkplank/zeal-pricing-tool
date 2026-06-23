@@ -17,7 +17,7 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-06-22, Prompt 2b complete (CardCash sell-side cart flow):
+Current status as of 2026-06-22, Phase 3 (merchant-match tooling) complete:
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
@@ -56,12 +56,27 @@ Current status as of 2026-06-22, Prompt 2b complete (CardCash sell-side cart flo
     must be "sell" (not "buy"); cartId is flat (response["cartId"]).
   - `fetch_observations()` emits TWO observations per merchant: sell-channel
     (buy-blob) + buy-channel (cart flow). Never raises on per-merchant failure.
+  - **Phase 3 (merchant-match tooling) complete:**
+    - `src/zeal/db/competitor_mapping.py` — `normalize_merchant_name()` +
+      `apply_cardcash_mapping()` (reads operator-approved CSV, updates
+      `merchants.cardcash_id`, conflict detection + `--force`).
+    - `src/zeal/db/repositories.py` — `MerchantForRefresh` dataclass +
+      `get_merchants_for_competitor_refresh()` (active merchants with
+      `cardcash_id IS NOT NULL`, ordered by `display_name`).
+    - `scripts/match_cardcash_ids.py` — offline proposal generator; writes
+      `build/cardcash_match_proposal.csv` (gitignored). Dry-run counts:
+      172 exact, 4 high, 12 review, 93 none (out of 281 Zeal merchants vs
+      773 CardCash entries).
+    - `tests/test_competitor_mapping.py` — 27 tests (all in-memory DB).
   - **Phase 4 (refresh orchestrator, CLI, display wiring) NOT yet implemented.**
     `zeal refresh-competitors` does not yet exist. Awaiting operator review.
+  - **Operator action required before Phase 4:** review
+    `build/cardcash_match_proposal.csv`, correct/remove rows, rename to
+    `data/cardcash_mapping_approved.csv`, then call `apply_cardcash_mapping()`.
 - Python standardized to 3.12.10 (python.org CPython) via `winget install
   Python.Python.3.12`. `.python-version` set to `3.12`; `[tool.uv]
   python-preference = "only-system"` pins uv to the system install. Suite:
-  **547 passing** on Python 3.12.
+  **574 passing** on Python 3.12.
 - `[project.scripts] zeal = "zeal.cli:main"` added; `src/zeal/__main__.py`
   added. `uv run zeal seed/serve/smoke-ebay` all resolve.
 - `truststore` added as a runtime dependency and injected at CLI startup
