@@ -19,12 +19,13 @@ Read the relevant docs before any non-trivial change. If code and docs disagree,
 
 ## Current v1 status
 
-Current status as of 2026-05-10, latest verified commit `1d31eb0`:
+Current status as of 2026-06-24, Phase 5 (CardCash competitor scraper live-verified) complete:
 
 - Phase 1 complete: spreadsheet parser, pricing engine, SQLite schema, golden baseline tests.
 - FastAPI dashboard implemented with seeded/synthetic recommendations, merchant
   detail (pricing cards, price history chart, formula breakdown, eBay
-  observations, competitor reference), and narrow merchant config editing.
+  observations, competitor reference panel with live CardCash rates), and narrow
+  merchant config editing.
 - Listing filter, refresh orchestrator, refresh routes, dashboard refresh button,
   live/synthetic eBay client factory, `.env.example`, and `zeal smoke-ebay` CLI
   exist with mocked tests.
@@ -33,6 +34,30 @@ Current status as of 2026-05-10, latest verified commit `1d31eb0`:
   not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
+- **CardCash competitor scraper complete through Phase 5:**
+  - `src/zeal/ingestion/competitor/` — `CompetitorClient` Protocol (`base.py`),
+    error hierarchy (`errors.py`), `CardCashClient` (`cardcash.py`), and
+    refresh orchestrator (`refresh.py`).
+  - `zeal refresh-competitors --limit N` CLI wired in `src/zeal/cli.py`.
+  - 184 merchants mapped via operator-reviewed CSV. `landry_s` and
+    `ann_taylor_loft` left unmapped pending operator confirmation.
+  - Full 184-merchant live run completed 2026-06-24: `status=completed`, no 429
+    at 750ms cadence. Rates verified accurate against cardcash.com (AMC sell
+    0.925 ↔ "7.5% off"; Abercrombie buy 0.805 ↔ "$80.50 on $100").
+  - Competitor reference panel renders live rates on merchant detail pages.
+  - Competitor data is reference-only; never feeds `compute_prices()`; golden
+    baseline and `ebay_weight=1.0` invariant untouched.
+  - `tests/test_cardcash_scraper.py` — 40 tests; `tests/test_competitor_mapping.py`
+    — 27 tests; `tests/test_competitor_refresh.py` — 8 tests.
+- **Next: eBay sold-listings scraper.** See `docs/ebay_scraper_handoff.md`.
+  Replaces the blocked Marketplace Insights API path via DIY httpx scraping
+  behind the existing `EbayClient` protocol seam.
+- Python standardized to 3.12.10 (python.org CPython); `python-preference =
+  "only-system"` in `[tool.uv]`. Suite: **582 passing** on Python 3.12.
+- `[project.scripts] zeal = "zeal.cli:main"` wired;
+  `zeal seed/serve/smoke-ebay/refresh-competitors` all resolve.
+- `truststore` runtime dependency added; injected at CLI startup and app lifespan.
+  Resolves `CERTIFICATE_VERIFY_FAILED` on Windows. Approved by operator 2026-06-14.
 
 Update this section when the project state changes materially.
 
@@ -65,10 +90,12 @@ Cross-layer imports flow inward: `web` and `ingestion` may import from `pricing`
 ## Database rules
 
 - SQLite file path defaults to `data/zeal.db`.
-- Canonical schema lives in `src/zeal/db/schema.sql` plus numbered migrations in `src/zeal/db/migrations/`.
+- Canonical schema lives in `src/zeal/db/schema.sql` only. `apply_schema()` in `src/zeal/db/connection.py` runs it via `conn.executescript()` — idempotent on new databases (`CREATE TABLE IF NOT EXISTS`), but does **not** `ALTER TABLE` existing ones. There is no `src/zeal/db/migrations/` directory.
+- When schema changes land, apply new columns via `ALTER TABLE` on the existing DB, or delete and re-seed. Confirm no unreproducible production data exists before re-seeding.
 - Timestamps are ISO 8601 UTC text.
 - Merchants are deactivated with `is_active = 0`; do not delete merchants.
 - `price_recommendations` is append-only and is the system of record for recommendations.
+- `competitor_observations` is append-only and is the system of record for competitor pricing history. Never delete or update rows; re-runs append new observations.
 - Do not reintroduce `published_prices`, `operator_actions`, risk/watchlist columns, or user/auth tables in v1.
 
 ## v1 scope guardrails

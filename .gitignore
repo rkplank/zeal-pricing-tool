@@ -35,3 +35,6 @@ Thumbs.db
 
 # Generated extraction report — regenerated on demand, not committed
 baseline_report.txt
+
+# Claude Code local tooling config (permissions, local preferences — not app config)
+.claude/

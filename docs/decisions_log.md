@@ -340,3 +340,164 @@ Competitor data is reference-only in v1 — displayed on the merchant detail pag
 Production Marketplace Insights API access is NOT yet granted. The sandbox keyset has the `buy.marketplace.insights` scope; the production keyset does not. Awaiting eBay support. v1 currently operates in synthetic mode using seeded spreadsheet-baseline recommendations. Do not run live eBay validation and do not use Browse API (Browse provides active listings only, not sold listings) until production Marketplace Insights entitlement is confirmed.
 
 See also: 2026-05-05 and 2026-05-08 entries above.
+
+---
+
+## 2026-05-30 — Two-concept competitor confidence model: stored source-quality vs effective confidence
+
+**Alternatives:** (a) a single confidence value set at parse time that encodes both data-surface precision and recency in one step; (b) separate stored and computed values, with aggregation consuming the computed form.
+
+**Rationale:** Conflating precision and recency in a single stored value makes it impossible to re-evaluate freshness as observations age without updating existing rows — which is undesirable in an append-only table. Separating the concepts allows: (1) the scraper to record what it knows at parse time (the surface's inherent precision), immutably; (2) the aggregation layer to apply a recency decay at query time without touching stored data. This design keeps `competitor_observations` append-only while still allowing effective confidence to degrade as observations age. See `competitor_scraper_design.md §6` and `pricing_algorithm.md §7.5`.
+
+---
+
+## 2026-05-30 — CompetitorClient Protocol parameter renamed source_key (from cardcash_id)
+
+**Alternatives:** (a) keep `cardcash_id: int` as the parameter name, accept that it is source-specific; (b) use `source_key: int` as a more generic name that accommodates future non-CardCash sources; (c) use `source_key: str | int` immediately to handle both numeric and string identifiers.
+
+**Rationale:** `cardcash_id` in the Protocol signature is a leaking abstraction: the Protocol is meant to be source-agnostic, but a CardCash-named field makes every future implementer feel out-of-place. `source_key: int` is generic enough for v1 (all identifiers in v1 are integers from the CardCash blob `id` field) while being specific enough to type correctly. Widening to `str | int` is a one-line change when a source with string identifiers is added. The DB column `merchants.cardcash_id` retains its name — this is the Protocol parameter only. See `competitor_scraper_design.md §3.1`.
+
+---
+
+## 2026-05-30 — Cart POST response parsed by field match, not positional index
+
+**Alternatives:** (a) use `response["cards"][-1]["percentage"]` (the last entry, assuming it is the one just added); (b) locate the entry by matching `card["merchant"] == source_key` (the merchantId just POSTed).
+
+**Rationale:** the CartCash cart API accumulates entries across merchants in a single session — adding a second merchant produces a two-entry `cards` array under the same `cartId`. Positional access `cards[-1]` assumes the API always returns the most-recently-added card last, and that no reordering ever occurs. This assumption is fragile and unverifiable without exhaustive testing across every merchant and API version. Field-based matching on the `merchant` integer is unambiguous regardless of array order. The scraper already knows `source_key` (it just POSTed it); the match is trivial and eliminates a category of cross-merchant contamination bug. See `competitor_scraper_design.md §4.5` step 3 and `§4.8` step 3.
+
+---
+
+## 2026-05-30 — enterValue standardized to 100, clamped to [minFaceValue, maxFaceValue] from blob
+
+**Alternatives:** (a) use a fixed value of 100 with no guard; (b) use the merchant's `maxFaceValue` from the blob; (c) clamp 100 to the merchant's face-value range, skip if bounds are malformed.
+
+**Rationale:** standardizing on $100 ensures comparability across merchants and across runs — a consistent basis for the `percentage` rate returned by the API. However, some merchants may not support a $100 denomination (e.g. a merchant whose cards only come in $25 increments). Posting an unsupported `enterValue` could produce a non-201 response or an error payload rather than a rate. Reading `minFaceValue` and `maxFaceValue` from the blob (already fetched) and clamping 100 to that range handles the common edge case without a live probe. Malformed bounds (`minFaceValue > maxFaceValue`) indicate a corrupt blob entry and warrant a `no_data` observation rather than a heuristic guess. The clamp is a Phase 1 safety assumption; Phase 2 verification with real API behavior is explicitly required. See `competitor_scraper_design.md §4.5` step 3 and `§4.8` step 3.
+
+---
+
+## 2026-05-30 — Session resilience: re-bootstrap on 401/403 or ≥18-min elapsed; 40-min total budget cap
+
+**Alternatives:** (a) no session resilience — rely on the 20-minute JWT covering a ~3-4 minute normal run; (b) re-bootstrap on any non-2xx response; (c) re-bootstrap specifically on 401/403 or at 18 minutes elapsed, with a 40-minute total cap.
+
+**Rationale:** a normal run of ~300 merchants at 750ms per-POST takes ~3-4 minutes, comfortably within the 20-minute JWT lifetime. However, the session can become invalid mid-run due to stale tokens (401/403) or if the run is paused or slowed by retries. Checking elapsed time at 18 minutes (2-minute safety margin) provides a proactive escape hatch without polling or inspecting the JWT's `exp` field. Re-bootstrapping on 401/403 handles the reactive case. The 40-minute total budget cap prevents a stalled merchant or repeated re-bootstraps from extending a run indefinitely, ensuring the `refresh_runs` row reaches a terminal state (`partial`) in all scenarios. See `competitor_scraper_design.md §4.6`.
+
+---
+
+## 2026-05-30 — Canary invariants checked before processing catalog; failure raises CompetitorClientError
+
+**Alternatives:** (a) no canary check — proceed with catalog regardless of size or anchor presence; (b) per-merchant validation only, skipping merchants that fail field-type checks; (c) catalog-wide canary before any per-merchant processing.
+
+**Rationale:** structural failures (schema renames, response format changes, truncated catalog) affect all merchants simultaneously and produce systematically wrong data, not isolated per-merchant errors. Emitting ~300 `no_data` observations when the catalog is empty or missing key fields provides the operator with no useful information and obscures the real failure mode. Raising `CompetitorClientError` on catalog-level canary failure aborts the run cleanly, sets `status='failed'`, and surfaces a single error message. The three invariants chosen (catalog size >100, anchor merchant presence, field type checks) are observable from the blob without network calls and detect the most common structural breakage. Anchor IDs may need updating if CardCash renumbers merchants (rare). See `competitor_scraper_design.md §9`.
+
+---
+
+## 2026-05-30 — Phase 4 migration hard gate before first live scraper run
+
+**Alternatives:** (a) run the scraper immediately after schema.sql edits with delete-and-reseed assuming no production data exists; (b) require explicit confirmation of an ALTER TABLE path or a DB backup before the first live run.
+
+**Rationale:** the Phase 1 schema additions (`cardcash_id` on `merchants`, `kind` on `refresh_runs`) are applied via `schema.sql` + delete-and-reseed. By the time Phase 4 ships, the production `data/zeal.db` may contain operator-entered merchant config edits, live eBay observations, and recommendation history not reproducible from the seed fixture. A silent delete-and-reseed would silently destroy this data. Requiring an explicit gate (ALTER TABLE path documented, or backup confirmed) prevents accidental data loss. This is a one-time gate for the Phase 4 feature, not an ongoing operational requirement. See `competitor_scraper_design.md §10 Phase 4` and `architecture.md §11 Phase 4`.
+
+---
+
+## 2026-05-30 — Second competitor source triggers evaluation of competitor_merchant_mapping table
+
+**Alternatives:** (a) add a source-specific column to `merchants` for each new source (e.g. `raise_id`, `cardpool_id`); (b) normalize source-specific identifiers into a `competitor_merchant_mapping(merchant_id, source_name, source_key)` table from the start; (c) defer the mapping table decision until a second source is actively being added.
+
+**Rationale:** one column per source (`cardcash_id`, `raise_id`, …) is straightforward for 2-3 sources but becomes unwieldy at 4+. A `competitor_merchant_mapping` table normalizes the pattern and avoids schema churn for each source addition. v1 uses the per-column approach (only `cardcash_id`) because it is simpler and the single-source requirement is well-defined. The decision to migrate to the normalized table should be made when a second source is actively scoped — at that point the operator will know whether both sources' identifiers are numeric integers (in which case the column approach extends easily) or whether source-specific shapes require a more flexible schema. See `pricing_algorithm.md §11` item 17 and `competitor_scraper_design.md §5`.
+
+---
+
+## 2026-06-14 — Python 3.12 (python.org CPython) standardization and truststore TLS fix
+
+**Alternatives:** (a) continue on python-build-standalone 3.14 (the uv default); (b) standardize on 3.12 python.org CPython; (c) set `python-preference = "only-managed"` to pin uv-managed 3.12.
+
+**Rationale:** The venv was being created on python-build-standalone 3.14 (the uv default when no system 3.12 exists). Two problems with that: (1) `pyproject.toml` targets Python 3.12 — running on 3.14 means CI and local are testing different minor versions; (2) python-build-standalone on Windows omits the OpenSSL `applink.c` shim, which routes `malloc`/`free` calls between DLLs at SSL startup. Without it, Python's `ssl` module can raise `CERTIFICATE_VERIFY_FAILED` even on sites with well-known CA chains. The python.org installer bundles the correct OpenSSL build with the applink wiring intact.
+
+`python-preference = "only-system"` in `[tool.uv]` ensures uv will not silently fall back to a managed interpreter if the system one is missing — the error is explicit and correctable, rather than a silent version drift.
+
+Python 3.12.10 installed via `winget install Python.Python.3.12 --source winget`. All 507 tests pass on 3.12.
+
+**Truststore:** `truststore==0.10.4` added as a runtime dependency; approved by operator 2026-06-14. `truststore.inject_into_ssl()` called once in `zeal.cli.main()` and once in `zeal.web.app._lifespan()` — startup only, not inside library or ingestion modules, and not in tests (respx mocks are unaffected). Before/after probe: both `api.ebay.com` and `www.cardcash.com` raised `CERTIFICATE_VERIFY_FAILED` without injection; after injection both return successful TLS handshakes (HTTP 404 and 200 respectively). This resolves a blocker that would have prevented any live eBay or CardCash network calls on this machine.
+
+---
+
+## 2026-06-14 — upToPercentage semantic gate confirmed: percentage-points, formula price_pct = 1 − up/100 correct
+
+**Gate required by:** `competitor_scraper_design.md §4.4` and `§10 Phase 2`. Phase 4 must not ship until this is confirmed and documented here.
+
+**Verification method:** parsed the real `tests/fixtures/cardcash/buy_catalog.html` fixture (773 merchants) using `json.JSONDecoder().raw_decode()` and inspected field values directly. No scraper code consumed; literals checked by hand.
+
+**Findings:**
+
+| Merchant | id | `upToPercentage` (type) | `price_pct = 1 − up/100` |
+|---|---|---|---|
+| Home Depot | 27 | `2` (int) | `0.9800` — consumer pays 98.0% of face value |
+| Starbucks | 54 | `5.6` (float) | `0.9440` — consumer pays 94.4% of face value |
+| Macaroni Grill | 352 | `45.5` (float) | `0.5450` — consumer pays 54.5% of face value |
+
+Full catalog stats: `upToPercentage` ranges [0.0, 45.5] across all 773 entries; all values in [0, 100]; median ≈ 5.5. These are clearly percentage-points (a discount in percentage-point units), not normalized fractions (which would all be <1.0).
+
+**Gate result — CONFIRMED:**
+- (a) `upToPercentage` is a discount in percentage-points. A value of 2 means "2% off face value," so the consumer pays 98.0%, not 2.0% of face value.
+- (b) The formula `price_pct = 1 − upToPercentage / 100` yields plausible consumer prices. Derived values cluster in [0.54, 1.0], consistent with real gift-card market rates.
+
+**Non-obvious finding — field types:** `sellIsOff` and `cardsAvailable` are `int` in the live API response, not `bool`. `sellIsOff ∈ {0, 1}`; `cardsAvailable` is a card-inventory count (0 = none in stock, N = N cards available). 79 of 773 merchants have `sellIsOff=1`; 182 have `cardsAvailable=0`. The parser uses Python truthiness checks (`if entry["sellIsOff"]`, `if not entry["cardsAvailable"]`), which handle both int and bool correctly and match the spec's intent.
+
+**Alternatives considered:** no alternatives — this was an empirical verification step, not a design choice. The only decision was the formula direction (consumer-pays vs discount), and the data confirms the consumer-pays reading: `upToPercentage=2` on Home Depot means the buyer pays 98% of face value.
+
+**Consequence:** Phase 4 (`zeal refresh-competitors`) may proceed once the sell-side cart flow (Prompt 2b) is implemented and validated. The buy-blob `sell`-channel formula is locked as `price_pct = 1 − upToPercentage / 100`.
+
+---
+
+## 2026-06-22 — CardCash sell-flow auth + cart shape corrected from live capture
+
+**Decision:** Updated `competitor_scraper_design.md §4.5, §4.6, §4.8` to reflect confirmed live API behavior. Supersedes the auth-recon and cart-shape assumptions in the 2026-05-30 entries.
+
+**Corrections:**
+
+1. **Auth is cookie-not-header.** Bootstrap is `POST /v3/session` with `json {}` and header `x-cc-app: q3vsT1zXO`. The server responds with `Set-Cookie: q3vsT1zXO=<JWT>`. A cookie-jar httpx client carries the JWT automatically on all subsequent `/v3/` calls. There is no `Authorization` header. The `x-cc-app` header value is the literal string `q3vsT1zXO` (an app identifier), sent on every `/v3/` request — it is not the JWT value. The prior design described a homepage GET bootstrap (`GET https://www.cardcash.com/`) that does not work headlessly; the homepage GET sets no cookies.
+
+2. **Cart action must be `"sell"`, not empty.** `POST /v3/carts` with body `{"action":"sell"}` returns 201. The body `{"action":"buy"}` also returns 201 but then rejects card-adds with a JSON schema validation error (`instance is not exactly one from </AddGiftCard>,</AddNewGiftCard>,</AddNewCartCard>`). The prior design described an empty body.
+
+3. **cartId is flat.** The cart-create response body is `{"cartId": "...", "cards": []}`. The prior design described a nested shape (`cart.sellCart.cartId`) which does not match the live API.
+
+4. **`sellIsOff` and `cardsAvailable` are `int`, not `bool`.** `sellIsOff ∈ {0, 1}`; `cardsAvailable` is a card-inventory count. Python truthiness checks handle both int and bool correctly; the canary field-type check is updated to accept `int`.
+
+**Source:** confirmed by headless probe script (anonymous session, no transaction, two merchants) executed 2026-06-21. Probe committed as a fixture-capture run; probe script not committed.
+
+**Alternatives:** none — this was empirical correction, not a design choice.
+
+---
+
+## 2026-06-24 — CardCash competitor scraper live and verified
+
+**Decision:** Closing the CardCash competitor scraper work. The full pipeline — from session bootstrap through DB insert — is live, correct against the real site, and rendering in the dashboard.
+
+**Live run results (2026-06-24):**
+- `uv run zeal refresh-competitors` completed with `status=completed processed=184/184`.
+- No HTTP 429 at the 750ms per-request cadence; no catastrophic abort (session,
+  cart, or blob failure). Rate-limit posture confirmed safe at this volume.
+- Harvest shape: 155 sell `available` / 29 sell `unavailable`; 122 `buy_electronic`
+  available + 23 `buy_mail` available; 39 buy-side `no_data`.
+- The 39 buy-side no_data rows come from merchants that CardCash sells but does not
+  buy back (e.g. AMC Theatres, which returned HTTP 400 on card-add). This is correct
+  behavior — the scraper accurately records "no rate" when CardCash genuinely does
+  not offer one. Not a bug.
+
+**Accuracy spot-checks against live cardcash.com:**
+- AMC sell channel: scraper wrote `price_pct=0.925`; CardCash site shows "Up to 7.5%
+  off." `1 − 0.075 = 0.925` — sell-side conversion formula (`price_pct = 1 −
+  upToPercentage/100`) confirmed end-to-end.
+- Abercrombie buy channel: scraper wrote `price_pct=0.805`; CardCash sell-a-card
+  flow shows "You get $80.50" on a $100 card. `80.50/100 = 0.805` — buy-side
+  conversion formula (`price_pct = percentage/100`) confirmed end-to-end.
+
+**Competitor reference panel:** renders live CardCash rates on merchant detail pages.
+Competitor data remains reference-only; it never feeds `compute_prices()`; the golden
+test baseline and the `ebay_weight=1.0` invariant are untouched.
+
+**Open item:** `landry_s` (Landry's) and `ann_taylor_loft` (Ann Taylor / Loft) left
+unmapped pending operator confirmation of what Zeal trades there. All other 184 active
+merchants with a CardCash presence are mapped and scraping.
+
+**Alternatives:** none — this was an empirical verification and close-out entry.

@@ -19,6 +19,10 @@ from zeal.web.templating import WEB_DIR, configure_template_filters
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    import truststore
+
+    truststore.inject_into_ssl()
+
     # Mark any refresh that was in flight when the server stopped as failed.
     conn = get_connection(app.state.db_path)
     try:

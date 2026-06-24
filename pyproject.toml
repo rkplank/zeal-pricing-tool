@@ -11,6 +11,7 @@ dependencies = [
     "uvicorn>=0.24",
     "python-dotenv>=1.2.2",
     "xlrd>=2.0",
+    "truststore>=0.10.4",
 ]
 
 [dependency-groups]
@@ -21,7 +22,11 @@ dev = [
     "respx>=0.21",
     "ruff>=0.1",
     "mypy>=1.7",
+    "pytest-timeout>=2.4.0",
 ]
+
+[project.scripts]
+zeal = "zeal.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -39,7 +44,10 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--continue-on-collection-errors"
+addopts = "--continue-on-collection-errors --timeout=30 --timeout-method=thread"
+
+[tool.uv]
+python-preference = "only-system"
 
 [tool.mypy]
 python_version = "3.12"

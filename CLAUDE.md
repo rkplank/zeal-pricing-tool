@@ -17,7 +17,7 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-05-10, latest verified commit `1d31eb0`:
+Current status as of 2026-06-24, Phase 5 (CardCash competitor scraper live-verified) complete:
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
@@ -34,6 +34,77 @@ Current status as of 2026-05-10, latest verified commit `1d31eb0`:
   not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
+- **CardCash competitor scraper complete through Phase 5 (live-verified):**
+  - `src/zeal/ingestion/competitor/` — `CompetitorClient` Protocol, error
+    hierarchy, and `__init__.py` (Phase 1 foundation).
+  - `src/zeal/ingestion/competitor/cardcash.py` — `CardCashClient` fully
+    implemented: `parse_catalog()`, `sell_observation()`,
+    `no_data_sell_observation()`, `fetch_buy_catalog()` (2a buy-blob surface),
+    plus `_ensure_session()`, `_ensure_cart()`, `_ensure_catalog()`,
+    `_post_card_with_retry()`, and `fetch_observations()` (2b sell-cart surface).
+  - `tests/fixtures/cardcash/buy_catalog.html` — 773-merchant live capture.
+  - `tests/fixtures/cardcash/cart_create_response.json` — live capture
+    (action:"sell" → {"cartId":"...","cards":[]}).
+  - `tests/fixtures/cardcash/card_add_response.json` — live capture (2-card
+    response: Home Depot id=27 percentage=83, Starbucks id=54 percentage=76).
+  - `tests/test_cardcash_scraper.py` — 40 tests, all passing (includes 7
+    retry-path tests for `_post_card_with_retry` with AsyncMock sleep patching).
+  - upToPercentage semantic gate confirmed (see decisions_log 2026-06-14):
+    values are percentage-points; `price_pct = 1 − upToPercentage/100` correct.
+  - Sell-side bootstrap confirmed (see decisions_log 2026-06-22): auth is
+    cookie-not-header (POST /v3/session sets q3vsT1zXO cookie); cart action
+    must be "sell" (not "buy"); cartId is flat (response["cartId"]).
+  - `fetch_observations()` emits TWO observations per merchant: sell-channel
+    (buy-blob) + buy-channel (cart flow). Never raises on per-merchant failure.
+  - **Phase 3 (merchant-match tooling) complete:**
+    - `src/zeal/db/competitor_mapping.py` — `normalize_merchant_name()` +
+      `apply_cardcash_mapping()` (reads operator-approved CSV, updates
+      `merchants.cardcash_id`, conflict detection + `--force`).
+    - `src/zeal/db/repositories.py` — `MerchantForRefresh` dataclass +
+      `get_merchants_for_competitor_refresh()` (active merchants with
+      `cardcash_id IS NOT NULL`, ordered by `display_name`).
+    - `scripts/match_cardcash_ids.py` — offline proposal generator; writes
+      `build/cardcash_match_proposal.csv` (gitignored). Dry-run counts:
+      172 exact, 4 high, 12 review, 93 none (out of 281 Zeal merchants vs
+      773 CardCash entries).
+    - `tests/test_competitor_mapping.py` — 27 tests (all in-memory DB).
+    - 184 merchants mapped. `landry_s` (Landry's) and `ann_taylor_loft`
+      (Ann Taylor / Loft) left unmapped pending operator confirmation of what
+      Zeal trades there.
+  - **Phase 4 (refresh orchestrator and CLI) complete:**
+    - `src/zeal/ingestion/competitor/refresh.py` — `run_competitor_refresh()`
+      orchestrator; `CompetitorRefreshSummary`; `kind='competitor'` on
+      `refresh_runs`; per-merchant inner try/except continues on ordinary
+      failures; `CompetitorClientError` outer abort marks `status='failed'`;
+      `last_successful_refresh` updated only on non-catastrophic completion.
+    - `src/zeal/cli.py` — `zeal refresh-competitors --limit N --db-path` wired.
+    - `tests/test_competitor_refresh.py` — 8 tests (mock client, in-memory DB).
+  - **Phase 5 (first live run and panel verification) complete:**
+    - Full 184-merchant live run completed 2026-06-24: `status=completed`,
+      no 429 at 750ms cadence, no catastrophic abort.
+    - Harvest shape: 155 sell available / 29 unavailable; 122 buy_electronic +
+      23 buy_mail available; 39 buy-side no_data (buy-only merchants like AMC
+      returning 400 on card-add — correct behavior, not a bug).
+    - Rates verified against live site: AMC sell 0.925 ↔ CardCash "7.5% off";
+      Abercrombie buy 0.805 ↔ CardCash "$80.50 on $100". Both conversion
+      formulas confirmed accurate end-to-end in production.
+    - Competitor reference panel renders live rates on merchant detail pages.
+    - Competitor data remains reference-only; never feeds `compute_prices()`;
+      golden baseline and `ebay_weight=1.0` invariant untouched.
+  - **Next: eBay sold-listings scraper.** See `docs/ebay_scraper_handoff.md`
+    for the fresh-session starting brief. Replaces the blocked Marketplace
+    Insights path via DIY httpx scraping behind the existing `EbayClient`
+    protocol seam.
+- Python standardized to 3.12.10 (python.org CPython) via `winget install
+  Python.Python.3.12`. `.python-version` set to `3.12`; `[tool.uv]
+  python-preference = "only-system"` pins uv to the system install. Suite:
+  **582 passing** on Python 3.12.
+- `[project.scripts] zeal = "zeal.cli:main"` added; `src/zeal/__main__.py`
+  added. `uv run zeal seed/serve/smoke-ebay/refresh-competitors` all resolve.
+- `truststore` added as a runtime dependency and injected at CLI startup
+  (`main()`) and app lifespan (`_lifespan()`). Resolves
+  `CERTIFICATE_VERIFY_FAILED` on both cardcash.com and api.ebay.com.
+  Approved by operator 2026-06-14.
 
 Do not run live eBay validation while production Marketplace Insights
 entitlement is blocked. Browse API provides active listings only; it is not a
@@ -89,9 +160,12 @@ Cross-layer imports flow inward: `web` and `ingestion` may import from `pricing`
 ### Database
 
 - SQLite at `data/zeal.db` (gitignored).
-- Canonical schema is `src/zeal/db/schema.sql` plus numbered migrations in `src/zeal/db/migrations/`.
+- Canonical schema is `src/zeal/db/schema.sql` only. `apply_schema()` in `src/zeal/db/connection.py` runs it via `conn.executescript()` with `CREATE TABLE IF NOT EXISTS` — idempotent on new databases, but does not `ALTER TABLE` existing ones. There is no `src/zeal/db/migrations/` directory.
+- When the schema changes, apply new columns manually via `ALTER TABLE` on the existing DB, or delete `data/zeal.db` and re-seed. Document which path was used. **Before re-seeding, confirm that no production data (merchant config edits, eBay observations, competitor observations) exists in the current DB that is not reproducible from the seed fixture.**
 - All percentages stored as `REAL` in `[0, 1]`. All timestamps as ISO 8601 UTC text.
 - Merchants are deactivated (`is_active = 0`), never deleted. Same for global constants — history matters.
+- `price_recommendations` is append-only and is the system of record for all algorithm recommendations.
+- `competitor_observations` is append-only and is the system of record for competitor pricing history. Do not delete or update rows; re-runs append new observations.
 
 ## What not to do in v1 without explicit scope change
 

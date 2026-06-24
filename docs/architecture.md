@@ -37,7 +37,7 @@ This document specifies how the v1 pricing tool is built and deployed. It assume
 
 | Layer | Choice | Why |
 |---|---|---|
-| Language | Python 3.12+ | Best ecosystem for HTTP scraping, data handling, eBay API |
+| Language | Python 3.12 (python.org CPython) | Best ecosystem for HTTP scraping, data handling, eBay API. Must use the python.org installer (not uv-managed python-build-standalone): the python.org Windows build includes the OpenSSL applink shim required for correct TLS on Windows. |
 | Web framework | FastAPI | Modern, async-capable, well-documented, plays nicely with HTMX |
 | Templating | Jinja2 | Standard for FastAPI server-rendered pages |
 | Frontend | HTMX + Tailwind | Server-rendered HTML with minimal JS; right complexity for a one-user dashboard |
@@ -426,6 +426,7 @@ CREATE TABLE refresh_runs (
 - **No FK cascades on delete.** Merchants are never deleted, only deactivated (`is_active = 0`). This preserves history.
 - **Snapshot config in `price_recommendations`.** When an old recommendation is reviewed months later, we want to know what the config was at the time, not what it is now. The JSON snapshot is the cheapest way to get this.
 - **`price_recommendations` is append-only.** Every refresh writes new rows. The merchant detail page reads the historical trail. There is no `current_recommendation` table; "current" means "most recent row by `computed_at` for this merchant."
+- **`competitor_observations` is append-only.** Every scraper run appends rows; existing observations are never modified or deleted. The table is the system of record for competitor pricing history. Queries for the current rate use `ORDER BY observed_at DESC LIMIT 1` scoped to merchant/channel.
 - **No `published_prices` or `operator_actions` tables.** v1 does not track which recommendations the operator chose to apply. The merchant config editor changes formula inputs and writes config history; it is not operator action tracking. v2 may reintroduce published-price workflow once the operator's workflow is stable enough to define what "published" means in this tool's context.
 - **No dedicated `users` table.** Single user, no auth needed.
 - **Competitor data is reference-only in v1.** Competitor observations exist for operator context and future blending. They are not used by v1 recommendations.
@@ -568,15 +569,22 @@ In v1 the dashboard always passes `config.ebay_weight = 1.0`, so the recommendat
 
 One-time, ~20 minutes:
 
-1. Install Python 3.12 from python.org (check "Add to PATH").
+1. Install **Python 3.12 from python.org** (`winget install Python.Python.3.12` or
+   download from python.org/downloads). Check "Add to PATH" if using the GUI installer.
+   Do NOT use a uv-managed python-build-standalone interpreter — it omits the OpenSSL
+   applink shim required for correct TLS on Windows, causing `CERTIFICATE_VERIFY_FAILED`
+   on sites like cardcash.com and api.ebay.com.
 2. Install `uv`: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
 3. Install Git for Windows.
 4. Clone the repo to `C:\zeal-pricing-tool`.
-5. `uv sync` — installs dependencies.
+5. `uv sync` — installs dependencies (including `truststore` for Windows TLS).
+   Run in **PowerShell**, not Git Bash: Git Bash resolves `python.exe` from
+   `mingw64\bin` before the system PATH, which can silently pick the wrong interpreter
+   and break SSL DLL resolution.
 6. Create `.env` from `.env.example`. Leave `ZEAL_EBAY_MODE=synthetic` until production Marketplace Insights access is confirmed.
-7. `uv run python -m zeal.cli init-db` — creates the SQLite file at `data/zeal.db`.
-8. `uv run python -m zeal.cli seed` — loads merchant data from the baseline fixture.
-9. `uv run python -m zeal.cli serve` — starts the dashboard at `http://127.0.0.1:8000`.
+7. `uv run zeal init-db` — creates the SQLite file at `data/zeal.db`.
+8. `uv run zeal seed` — loads merchant data from the baseline fixture.
+9. `uv run zeal serve` — starts the dashboard at `http://127.0.0.1:8000`.
 
 ### 9.2 Daily use
 
@@ -629,23 +637,47 @@ Pure-function pricing engine, Pydantic models, SQLite schema, spreadsheet parser
 
 Current state: all of the above is implemented and tested. The tool operates in synthetic mode (seeded spreadsheet-baseline recommendations). Dashboard includes pricing list, merchant detail (recommendation cards, price history chart, formula breakdown, eBay observations, competitor reference panel), narrow config editor, and source/confidence badges.
 
-### Phase 4 — CardCash competitor scraper (planned)
+### Phase 4 — CardCash competitor scraper — COMPLETE
 
 Goal: automated competitor data collection.
 
-- CardCash scraper (`ingestion/competitor/`) — not yet built
-- Competitor refresh integrated into the background refresh task
-- Competitor observations auto-populate the competitor reference panel
+As built:
+- `src/zeal/ingestion/competitor/cardcash.py` — `CardCashClient`: buy-blob parser
+  (sell channel), sell-cart flow (buy channel), session resilience, canary checks.
+- `src/zeal/ingestion/competitor/refresh.py` — `run_competitor_refresh()` orchestrator
+  with `CompetitorRefreshSummary`; `zeal refresh-competitors --limit N` CLI.
+- 184 merchants mapped via operator-reviewed CSV (`data/cardcash_mapping_approved.csv`).
+- Full 184-merchant live run completed 2026-06-24: `status=completed`, no 429 at 750ms
+  cadence. Harvest: 155 sell available / 29 unavailable; 122 buy_electronic + 23 buy_mail
+  available; 39 no_data (buy-only merchants returning 400 on card-add — correct behavior).
+- Rates verified accurate against live cardcash.com (AMC sell 0.925 ↔ "7.5% off";
+  Abercrombie buy 0.805 ↔ "$80.50 on $100"). Both conversion formulas confirmed
+  end-to-end in production.
+- Competitor reference panel renders live rates on merchant detail pages.
+- Competitor data remains reference-only; never feeds `compute_prices()`; golden baseline
+  and `ebay_weight=1.0` invariant untouched throughout.
+- 75 tests across scraper, mapping, and orchestrator modules.
 
-The competitor data schema and aggregation logic are already in place; this phase adds the collection mechanism only.
-
-**Acceptance:** after a refresh, CardCash rates appear on the merchant detail page for active merchants. The recommendation is unchanged — competitor data is reference-only in v1.
+Open item: `landry_s` (Landry's) and `ann_taylor_loft` (Ann Taylor / Loft) left unmapped
+pending operator confirmation of what Zeal trades there.
 
 ### Phase 5 — Polish and stabilize
 
-Open-ended: bug fixes from operator feedback, UI tweaks, edge case handling. Begins after Phase 4 has been used in real workflow.
+Competitor reference panel now renders live CardCash rates, completing the original
+Phase 4 acceptance criterion. Ongoing: bug fixes from operator feedback, UI tweaks,
+edge case handling as the tool is used in real workflow.
 
-After Phase 5: stabilize. v2 (per `pricing_algorithm.md` §11) starts only after the operator has used v1 long enough to have informed feedback on which v2 improvements are worth the effort.
+After Phase 5: stabilize. v2 (per `pricing_algorithm.md` §11) starts only after the
+operator has used v1 long enough to have informed feedback on which v2 improvements are
+worth the effort.
+
+### Next phase — eBay sold-listings scraper
+
+Replaces the blocked eBay Marketplace Insights API path with DIY httpx scraping of
+eBay sold/completed listings, behind the existing `EbayClient` protocol seam
+(`src/zeal/ingestion/ebay_client.py`). The scraper adapter slots in alongside
+`SyntheticEbayClient`; `filter_listings()` and `compute_ebay_average()` are unchanged.
+See `docs/ebay_scraper_handoff.md` for the fresh-session starting brief.
 
 ---
 
@@ -685,7 +717,7 @@ To keep v1 scoped:
 - No email/SMS alerts on failures (logs only).
 - No internationalization.
 - No automated competitor source discovery.
-- Only one competitor source in v1 (CardCash). Additional sources are v2.
+- Only one competitor source in v1 (CardCash). Additional sources are v2. When a second source is added, evaluate whether to normalize source-specific merchant identifiers into a `competitor_merchant_mapping(merchant_id, source_name, source_key)` table (replacing the per-column approach of `merchants.cardcash_id`) — see `pricing_algorithm.md §11` item 17 and `competitor_scraper_design.md §5`.
 - No automated database backup — manual copy as documented in §10.
 
 All of these are tracked in the algorithm spec's v2 roadmap or are de novo improvements for later versions.

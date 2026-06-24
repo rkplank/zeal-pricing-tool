@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS merchants (
     inclusion_regex          TEXT NOT NULL,
     exclusion_regex          TEXT,
     notes                    TEXT,
+    cardcash_id              INTEGER,
     is_active                INTEGER NOT NULL DEFAULT 1,
     created_at               TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at               TEXT NOT NULL DEFAULT (datetime('now'))
@@ -111,6 +112,7 @@ CREATE INDEX IF NOT EXISTS idx_comp_obs_lookup
 
 CREATE TABLE IF NOT EXISTS refresh_runs (
     id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind                   TEXT NOT NULL DEFAULT 'ebay' CHECK (kind IN ('ebay','competitor')),
     status                 TEXT NOT NULL CHECK (status IN ('running','completed','partial','failed')),
     started_at             TEXT NOT NULL DEFAULT (datetime('now')),
     completed_at           TEXT,

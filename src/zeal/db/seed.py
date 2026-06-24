@@ -94,16 +94,26 @@ def _seed_global_constants(conn: sqlite3.Connection, constants: GlobalConstants)
         )
 
 
+_CARDCASH_NOTES = (
+    "CardCash: v1 reference-only competitor source. Rates displayed on merchant "
+    "detail page for operator context; not fed into recommendations. "
+    "Automated scraper added in Phase 2."
+)
+
+
 def _seed_competitor_source(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
-        INSERT INTO competitor_sources (source_name, collection_method, notes)
-        VALUES ('cardcash', 'scraper', 'Phase 2 placeholder; no scraper runs yet')
+        INSERT INTO competitor_sources
+            (source_name, collection_method, refresh_interval_days, notes)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(source_name) DO UPDATE SET
             collection_method = excluded.collection_method,
+            refresh_interval_days = excluded.refresh_interval_days,
             notes = excluded.notes,
             updated_at = datetime('now')
-        """
+        """,
+        ("cardcash", "scraper", 7, _CARDCASH_NOTES),
     )
 
 
