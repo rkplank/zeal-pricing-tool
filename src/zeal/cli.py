@@ -46,6 +46,34 @@ def cmd_serve(args: argparse.Namespace) -> None:
     uvicorn.run(app, host=args.host, port=args.port)
 
 
+def cmd_refresh_competitors(args: argparse.Namespace) -> None:
+    raise SystemExit(asyncio.run(_run_refresh_competitors(args.db_path, args.limit)))
+
+
+async def _run_refresh_competitors(db_path: Path, limit: int | None) -> int:
+    from zeal.db.connection import get_connection
+    from zeal.ingestion.competitor.cardcash import CardCashClient
+    from zeal.ingestion.competitor.refresh import run_competitor_refresh
+
+    http_client = httpx.AsyncClient()
+    try:
+        client = CardCashClient(http_client=http_client)
+        conn = get_connection(db_path)
+        try:
+            summary = await run_competitor_refresh(db=conn, client=client, limit=limit)
+        finally:
+            conn.close()
+    finally:
+        await http_client.aclose()
+
+    print(f"Competitor refresh complete: run_id={summary.refresh_run_id}")
+    print(f"  status={summary.status}  processed={summary.processed}/{summary.total}")
+    if summary.errored_merchants:
+        ids = ", ".join(summary.errored_merchants)
+        print(f"  errored ({len(summary.errored_merchants)}): {ids}")
+    return 0 if summary.status in {"completed", "partial"} else 1
+
+
 def cmd_smoke_ebay(args: argparse.Namespace) -> None:
     load_dotenv()
     raise SystemExit(asyncio.run(_run_smoke_ebay(args.merchant, args.limit)))
@@ -226,6 +254,24 @@ def main() -> None:
         help="Display limit (default: %(default)s)",
     )
 
+    refresh_competitors = subparsers.add_parser(
+        "refresh-competitors", help="Fetch competitor observations from CardCash"
+    )
+    refresh_competitors.add_argument(
+        "--db-path",
+        type=Path,
+        default=DEFAULT_DB_PATH,
+        metavar="PATH",
+        help="Path to the SQLite database file (default: %(default)s)",
+    )
+    refresh_competitors.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Process only the first N mapped merchants (default: all)",
+    )
+
     args = parser.parse_args()
     if args.command == "init-db":
         cmd_init_db(args)
@@ -235,6 +281,8 @@ def main() -> None:
         cmd_serve(args)
     elif args.command == "smoke-ebay":
         cmd_smoke_ebay(args)
+    elif args.command == "refresh-competitors":
+        cmd_refresh_competitors(args)
 
 
 if __name__ == "__main__":
