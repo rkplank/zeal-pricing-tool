@@ -637,25 +637,47 @@ Pure-function pricing engine, Pydantic models, SQLite schema, spreadsheet parser
 
 Current state: all of the above is implemented and tested. The tool operates in synthetic mode (seeded spreadsheet-baseline recommendations). Dashboard includes pricing list, merchant detail (recommendation cards, price history chart, formula breakdown, eBay observations, competitor reference panel), narrow config editor, and source/confidence badges.
 
-### Phase 4 — CardCash competitor scraper (planned)
+### Phase 4 — CardCash competitor scraper — COMPLETE
 
 Goal: automated competitor data collection.
 
-- CardCash scraper (`ingestion/competitor/`) — not yet built
-- Competitor refresh integrated into the background refresh task
-- Competitor observations auto-populate the competitor reference panel
+As built:
+- `src/zeal/ingestion/competitor/cardcash.py` — `CardCashClient`: buy-blob parser
+  (sell channel), sell-cart flow (buy channel), session resilience, canary checks.
+- `src/zeal/ingestion/competitor/refresh.py` — `run_competitor_refresh()` orchestrator
+  with `CompetitorRefreshSummary`; `zeal refresh-competitors --limit N` CLI.
+- 184 merchants mapped via operator-reviewed CSV (`data/cardcash_mapping_approved.csv`).
+- Full 184-merchant live run completed 2026-06-24: `status=completed`, no 429 at 750ms
+  cadence. Harvest: 155 sell available / 29 unavailable; 122 buy_electronic + 23 buy_mail
+  available; 39 no_data (buy-only merchants returning 400 on card-add — correct behavior).
+- Rates verified accurate against live cardcash.com (AMC sell 0.925 ↔ "7.5% off";
+  Abercrombie buy 0.805 ↔ "$80.50 on $100"). Both conversion formulas confirmed
+  end-to-end in production.
+- Competitor reference panel renders live rates on merchant detail pages.
+- Competitor data remains reference-only; never feeds `compute_prices()`; golden baseline
+  and `ebay_weight=1.0` invariant untouched throughout.
+- 75 tests across scraper, mapping, and orchestrator modules.
 
-The competitor data schema and aggregation logic are already in place; this phase adds the collection mechanism only.
-
-**Pre-condition before first live run.** The Phase 4 scraper requires two schema additions applied via `schema.sql` + delete-and-reseed: `cardcash_id INTEGER` on `merchants`, and `kind TEXT` discriminator on `refresh_runs`. Before running the scraper against a production `data/zeal.db` that holds operator-entered merchant config edits or live eBay observations, confirm one of: (a) a manual `ALTER TABLE` path exists to add the columns without data loss, or (b) a backup/export of the DB (or at minimum `merchant_config_history` and `ebay_observations`) has been taken before re-seeding. See `competitor_scraper_design.md §10 Phase 4`.
-
-**Acceptance:** after a refresh, CardCash rates appear on the merchant detail page for active merchants. The recommendation is unchanged — competitor data is reference-only in v1.
+Open item: `landry_s` (Landry's) and `ann_taylor_loft` (Ann Taylor / Loft) left unmapped
+pending operator confirmation of what Zeal trades there.
 
 ### Phase 5 — Polish and stabilize
 
-Open-ended: bug fixes from operator feedback, UI tweaks, edge case handling. Begins after Phase 4 has been used in real workflow.
+Competitor reference panel now renders live CardCash rates, completing the original
+Phase 4 acceptance criterion. Ongoing: bug fixes from operator feedback, UI tweaks,
+edge case handling as the tool is used in real workflow.
 
-After Phase 5: stabilize. v2 (per `pricing_algorithm.md` §11) starts only after the operator has used v1 long enough to have informed feedback on which v2 improvements are worth the effort.
+After Phase 5: stabilize. v2 (per `pricing_algorithm.md` §11) starts only after the
+operator has used v1 long enough to have informed feedback on which v2 improvements are
+worth the effort.
+
+### Next phase — eBay sold-listings scraper
+
+Replaces the blocked eBay Marketplace Insights API path with DIY httpx scraping of
+eBay sold/completed listings, behind the existing `EbayClient` protocol seam
+(`src/zeal/ingestion/ebay_client.py`). The scraper adapter slots in alongside
+`SyntheticEbayClient`; `filter_listings()` and `compute_ebay_average()` are unchanged.
+See `docs/ebay_scraper_handoff.md` for the fresh-session starting brief.
 
 ---
 

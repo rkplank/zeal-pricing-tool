@@ -466,3 +466,38 @@ Full catalog stats: `upToPercentage` ranges [0.0, 45.5] across all 773 entries; 
 **Source:** confirmed by headless probe script (anonymous session, no transaction, two merchants) executed 2026-06-21. Probe committed as a fixture-capture run; probe script not committed.
 
 **Alternatives:** none — this was empirical correction, not a design choice.
+
+---
+
+## 2026-06-24 — CardCash competitor scraper live and verified
+
+**Decision:** Closing the CardCash competitor scraper work. The full pipeline — from session bootstrap through DB insert — is live, correct against the real site, and rendering in the dashboard.
+
+**Live run results (2026-06-24):**
+- `uv run zeal refresh-competitors` completed with `status=completed processed=184/184`.
+- No HTTP 429 at the 750ms per-request cadence; no catastrophic abort (session,
+  cart, or blob failure). Rate-limit posture confirmed safe at this volume.
+- Harvest shape: 155 sell `available` / 29 sell `unavailable`; 122 `buy_electronic`
+  available + 23 `buy_mail` available; 39 buy-side `no_data`.
+- The 39 buy-side no_data rows come from merchants that CardCash sells but does not
+  buy back (e.g. AMC Theatres, which returned HTTP 400 on card-add). This is correct
+  behavior — the scraper accurately records "no rate" when CardCash genuinely does
+  not offer one. Not a bug.
+
+**Accuracy spot-checks against live cardcash.com:**
+- AMC sell channel: scraper wrote `price_pct=0.925`; CardCash site shows "Up to 7.5%
+  off." `1 − 0.075 = 0.925` — sell-side conversion formula (`price_pct = 1 −
+  upToPercentage/100`) confirmed end-to-end.
+- Abercrombie buy channel: scraper wrote `price_pct=0.805`; CardCash sell-a-card
+  flow shows "You get $80.50" on a $100 card. `80.50/100 = 0.805` — buy-side
+  conversion formula (`price_pct = percentage/100`) confirmed end-to-end.
+
+**Competitor reference panel:** renders live CardCash rates on merchant detail pages.
+Competitor data remains reference-only; it never feeds `compute_prices()`; the golden
+test baseline and the `ebay_weight=1.0` invariant are untouched.
+
+**Open item:** `landry_s` (Landry's) and `ann_taylor_loft` (Ann Taylor / Loft) left
+unmapped pending operator confirmation of what Zeal trades there. All other 184 active
+merchants with a CardCash presence are mapped and scraping.
+
+**Alternatives:** none — this was an empirical verification and close-out entry.

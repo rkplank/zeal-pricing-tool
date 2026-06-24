@@ -17,7 +17,7 @@ Read the relevant section before making any non-trivial change. The spec is the 
 
 ## Current phase and status
 
-Current status as of 2026-06-22, Phase 3 (merchant-match tooling) complete:
+Current status as of 2026-06-24, Phase 5 (CardCash competitor scraper live-verified) complete:
 
 - Phase 1 is complete: spreadsheet parser, pure pricing engine, SQLite schema,
   seeded baseline data, and golden tests validate spreadsheet-faithful behavior
@@ -34,7 +34,7 @@ Current status as of 2026-06-22, Phase 3 (merchant-match tooling) complete:
   not. Awaiting eBay support. v1 currently operates in synthetic mode.
 - Narrow one-merchant-at-a-time merchant config editing is implemented for
   formula/config inputs with history logging.
-- CardCash scraper complete through Prompt 2b:
+- **CardCash competitor scraper complete through Phase 5 (live-verified):**
   - `src/zeal/ingestion/competitor/` — `CompetitorClient` Protocol, error
     hierarchy, and `__init__.py` (Phase 1 foundation).
   - `src/zeal/ingestion/competitor/cardcash.py` — `CardCashClient` fully
@@ -68,17 +68,39 @@ Current status as of 2026-06-22, Phase 3 (merchant-match tooling) complete:
       172 exact, 4 high, 12 review, 93 none (out of 281 Zeal merchants vs
       773 CardCash entries).
     - `tests/test_competitor_mapping.py` — 27 tests (all in-memory DB).
-  - **Phase 4 (refresh orchestrator, CLI, display wiring) NOT yet implemented.**
-    `zeal refresh-competitors` does not yet exist. Awaiting operator review.
-  - **Operator action required before Phase 4:** review
-    `build/cardcash_match_proposal.csv`, correct/remove rows, rename to
-    `data/cardcash_mapping_approved.csv`, then call `apply_cardcash_mapping()`.
+    - 184 merchants mapped. `landry_s` (Landry's) and `ann_taylor_loft`
+      (Ann Taylor / Loft) left unmapped pending operator confirmation of what
+      Zeal trades there.
+  - **Phase 4 (refresh orchestrator and CLI) complete:**
+    - `src/zeal/ingestion/competitor/refresh.py` — `run_competitor_refresh()`
+      orchestrator; `CompetitorRefreshSummary`; `kind='competitor'` on
+      `refresh_runs`; per-merchant inner try/except continues on ordinary
+      failures; `CompetitorClientError` outer abort marks `status='failed'`;
+      `last_successful_refresh` updated only on non-catastrophic completion.
+    - `src/zeal/cli.py` — `zeal refresh-competitors --limit N --db-path` wired.
+    - `tests/test_competitor_refresh.py` — 8 tests (mock client, in-memory DB).
+  - **Phase 5 (first live run and panel verification) complete:**
+    - Full 184-merchant live run completed 2026-06-24: `status=completed`,
+      no 429 at 750ms cadence, no catastrophic abort.
+    - Harvest shape: 155 sell available / 29 unavailable; 122 buy_electronic +
+      23 buy_mail available; 39 buy-side no_data (buy-only merchants like AMC
+      returning 400 on card-add — correct behavior, not a bug).
+    - Rates verified against live site: AMC sell 0.925 ↔ CardCash "7.5% off";
+      Abercrombie buy 0.805 ↔ CardCash "$80.50 on $100". Both conversion
+      formulas confirmed accurate end-to-end in production.
+    - Competitor reference panel renders live rates on merchant detail pages.
+    - Competitor data remains reference-only; never feeds `compute_prices()`;
+      golden baseline and `ebay_weight=1.0` invariant untouched.
+  - **Next: eBay sold-listings scraper.** See `docs/ebay_scraper_handoff.md`
+    for the fresh-session starting brief. Replaces the blocked Marketplace
+    Insights path via DIY httpx scraping behind the existing `EbayClient`
+    protocol seam.
 - Python standardized to 3.12.10 (python.org CPython) via `winget install
   Python.Python.3.12`. `.python-version` set to `3.12`; `[tool.uv]
   python-preference = "only-system"` pins uv to the system install. Suite:
-  **574 passing** on Python 3.12.
+  **582 passing** on Python 3.12.
 - `[project.scripts] zeal = "zeal.cli:main"` added; `src/zeal/__main__.py`
-  added. `uv run zeal seed/serve/smoke-ebay` all resolve.
+  added. `uv run zeal seed/serve/smoke-ebay/refresh-competitors` all resolve.
 - `truststore` added as a runtime dependency and injected at CLI startup
   (`main()`) and app lifespan (`_lifespan()`). Resolves
   `CERTIFICATE_VERIFY_FAILED` on both cardcash.com and api.ebay.com.
